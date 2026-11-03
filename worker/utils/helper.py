@@ -1,152 +1,104 @@
-from __future__ import annotations
-
+from typing import Any
+from livekit.agents import JobContext
+from utils.backend_client import BackendClient
 import logging
 import os
-from dataclasses import dataclass
-from typing import Any
-
-from livekit import api, rtc
 
 logger = logging.getLogger(__name__)
 
-
-@dataclass
-class RecordingEgressTarget:
-    role: str
-    identity: str | None
-    room_name: str
-    organization_id: str
-    session_id: str
+SESSION_END_STATE: dict[str, dict[str, Any]] = {}
 
 
-def resolve_user_participant(room: rtc.Room) -> rtc.RemoteParticipant | None:
-    """Prefer the human participant; skip agent / avatar workers."""
-    agent_kind = rtc.ParticipantKind.PARTICIPANT_KIND_AGENT
-
-    def _is_agent(participant: rtc.RemoteParticipant) -> bool:
-        kind = getattr(participant, "kind", None)
-        attrs = getattr(participant, "attributes", None) or {}
-        identity = (participant.identity or "").lower()
-        if kind == agent_kind:
-            return True
-        if attrs.get("lk.publish_on_behalf"):
-            return True
-        if identity.startswith(("anam-", "avatar-", "spatialreal-", "spatius-")):
-            return True
-        return False
-
-    for participant in room.remote_participants.values():
-        if not _is_agent(participant):
-            return participant
+def serialize_history(history: Any) -> dict[str, Any] | None:
+    if history is None:
+        return None
+    if hasattr(history, "to_dict"):
+        try:
+            payload = history.to_dict(exclude_timestamp=False)
+            return dict(payload) if isinstance(payload, dict) else {"items": payload}
+        except Exception:
+            logger.exception("failed to serialize session.history")
+    if isinstance(history, dict):
+        return history
     return None
 
 
-def collect_recording_egresses(
-    room: rtc.Room,
-    *,
-    organization_id: str,
-    session_id: str,
-    room_name: str,
-    user_identity: str | None,
-    avatar_identity: str | None,
-) -> list[RecordingEgressTarget]:
-    targets: list[RecordingEgressTarget] = [
-        RecordingEgressTarget(
-            role="room",
-            identity=None,
-            room_name=room_name,
-            organization_id=organization_id,
-            session_id=session_id,
-        )
-    ]
-    if user_identity:
-        targets.append(
-            RecordingEgressTarget(
-                role="user",
-                identity=user_identity,
-                room_name=room_name,
-                organization_id=organization_id,
-                session_id=session_id,
-            )
-        )
-    if avatar_identity:
-        targets.append(
-            RecordingEgressTarget(
-                role="avatar",
-                identity=avatar_identity,
-                room_name=room_name,
-                organization_id=organization_id,
-                session_id=session_id,
-            )
-        )
-    return targets
+def serialize_report(report: Any) -> dict[str, Any]:
+    if report is None:
+        return {}
+    if hasattr(report, "to_dict"):
+        try:
+            return dict(report.to_dict())
+        except Exception:
+            pass
+    if hasattr(report, "model_dump"):
+        try:
+            return report.model_dump()
+        except Exception:
+            pass
+    if isinstance(report, dict):
+        return report
+    return {"repr": repr(report)}
 
 
-def recording_egresses_payload(targets: list[RecordingEgressTarget]) -> list[dict[str, Any]]:
-    return [
-        {
-            "role": t.role,
-            "identity": t.identity,
-            "room_name": t.room_name,
-            "organization_id": t.organization_id,
-            "session_id": t.session_id,
-        }
-        for t in targets
-    ]
-
-
-async def start_recording_egresses(
-    *,
-    room_name: str,
-    targets: list[RecordingEgressTarget],
-) -> list[dict[str, Any]]:
-    url = os.getenv("LIVEKIT_URL", "")
-    key = os.getenv("LIVEKIT_API_KEY", "")
-    secret = os.getenv("LIVEKIT_API_SECRET", "")
-    if not (url and key and secret):
-        logger.error("local egress fallback missing LiveKit credentials")
-        return []
-
-    results: list[dict[str, Any]] = []
-    lk = api.LiveKitAPI(url, key, secret)
-    try:
-        for target in targets:
-            filepath = f"/tmp/mavrik_{room_name}_{target.role}.mp4"
-            file_output = api.EncodedFileOutput(
-                filepath=filepath,
-                file_type=api.EncodedFileType.MP4,
-            )
-            try:
-                if target.identity:
-                    info = await lk.egress.start_participant_egress(
-                        api.ParticipantEgressRequest(
-                            room_name=room_name,
-                            identity=target.identity,
-                            file_outputs=[file_output],
-                        )
-                    )
+def normalize_usage_payload(usage: Any) -> dict[str, Any] | list[Any] | None:
+    if usage is None:
+        return None
+    if isinstance(usage, list):
+        return usage
+    if isinstance(usage, dict):
+        return usage
+    if hasattr(usage, "model_usage"):
+        model_usage = getattr(usage, "model_usage", None)
+        if isinstance(model_usage, list):
+            rows: list[Any] = []
+            for item in model_usage:
+                if hasattr(item, "model_dump"):
+                    rows.append(item.model_dump(exclude_defaults=True))
+                elif isinstance(item, dict):
+                    rows.append(item)
                 else:
-                    info = await lk.egress.start_room_composite_egress(
-                        api.RoomCompositeEgressRequest(
-                            room_name=room_name,
-                            layout="speaker",
-                            file_outputs=[file_output],
-                        )
-                    )
-                results.append(
-                    {
-                        "role": target.role,
-                        "egress_id": getattr(info, "egress_id", None),
-                        "filepath": filepath,
-                    }
-                )
-            except Exception:
-                logger.exception("local egress failed role=%s", target.role)
-    finally:
-        await lk.aclose()
-    return results
+                    rows.append({"raw": repr(item)})
+            return {"model_usage": rows}
+    if hasattr(usage, "model_dump"):
+        try:
+            dumped = usage.model_dump()
+            return dumped if isinstance(dumped, (dict, list)) else {"raw": dumped}
+        except Exception:
+            pass
+    return {"raw": repr(usage)}
 
 
-async def dial_outbound_sip(*_args: Any, **_kwargs: Any) -> None:
-    """Phone dialing is out of scope for the self-contained session stack."""
-    logger.warning("dial_outbound_sip called but telephony is disabled in this build")
+async def on_session_end(ctx: JobContext) -> None:
+    """Persist LiveKit session report + usage + full chat history to the backend."""
+    backend = BackendClient(
+        os.getenv("BACKEND_BASE_URL") or "",
+        os.getenv("BACKEND_API_KEY") or "",
+    )
+    snapshot = SESSION_END_STATE.pop(ctx.job.id, {})
+    report_payload: dict[str, Any] = {}
+    usage_payload: dict[str, Any] | list[Any] | None = None
+    metrics_payload: list[dict[str, Any]] = list(snapshot.get("metrics") or [])
+
+    try:
+        report = ctx.make_session_report()
+        report_payload = serialize_report(report)
+    except Exception:
+        logger.exception("make_session_report failed")
+
+    try:
+        usage_payload = normalize_usage_payload(
+            report_payload.get("usage") if isinstance(report_payload, dict) else None
+        )
+        if usage_payload is None:
+            usage_payload = normalize_usage_payload(snapshot.get("usage"))
+    except Exception:
+        usage_payload = normalize_usage_payload(snapshot.get("usage"))
+
+    await backend.post_session_report(
+        ctx.job.metadata.session_id,
+        report=report_payload,
+        usage=usage_payload,
+        metrics=metrics_payload,
+        is_final=True,
+    )

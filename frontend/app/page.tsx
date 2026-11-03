@@ -33,8 +33,8 @@ export default function Page() {
           Identity & body scan interview
         </h1>
         <p className="mt-4 max-w-md text-sm leading-relaxed text-zinc-400">
-          Start a LiveKit session with Anam avatar guidance, Muse-powered KYC and body
-          analysis, live proctoring, and a disclosed AI estimate report.
+          Start a LiveKit session with Gemini Live — it sees your camera, coaches posture
+          stage by stage, and captures identity and full-body stills.
         </p>
         <label className="mt-8 block text-xs text-zinc-500">Participant name</label>
         <input
@@ -52,8 +52,8 @@ export default function Page() {
         </button>
         {error ? <p className="mt-3 text-sm text-rose-300">{error}</p> : null}
         <p className="mt-6 text-[11px] leading-relaxed text-amber-200/70">
-          Estimated height, weight, BMI, heart rate, and respiratory rate in reports are AI
-          estimates only — not clinical measurements or medical advice.
+          Captures are saved to the session. Structured Muse analysis is paused for this
+          Live vision path.
         </p>
       </div>
     </div>

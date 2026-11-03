@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import {
   LiveKitRoom,
   RoomAudioRenderer,
@@ -9,26 +9,17 @@ import {
   useVoiceAssistant,
   VideoTrack,
 } from "@livekit/components-react"
+import { ConnectionState, RoomEvent, type RpcInvocationData } from "livekit-client"
 import "@livekit/components-styles"
 
 import { LocalCamera } from "@/components/local-camera"
-import { addContext, captureVideoFrame } from "@/lib/rpc"
 import { uploadAsset } from "@/lib/api"
-
-const STEPS = [
-  { id: "precheck", label: "Lighting" },
-  { id: "face", label: "Face" },
-  { id: "liveness", label: "Liveness" },
-  { id: "kyc", label: "KYC ID" },
-  { id: "body_front", label: "Body front" },
-  { id: "body_back", label: "Body back" },
-  { id: "done", label: "Done" },
-] as const
-
-type StepId = (typeof STEPS)[number]["id"]
-
-const DISCLOSURE =
-  "AI estimates only — not clinical measurements, medical advice, or a diagnosis."
+import { captureVideoFrame } from "@/lib/rpc"
+import {
+  assetKindForStage,
+  isStageId,
+  type StageId,
+} from "@/lib/stages"
 
 type Props = {
   token: string
@@ -38,6 +29,16 @@ type Props = {
 }
 
 export function InterviewRoom(props: Props) {
+  const leftRef = useRef(false)
+  const onLeaveRef = useRef(props.onLeave)
+  onLeaveRef.current = props.onLeave
+
+  const leave = useCallback(() => {
+    if (leftRef.current) return
+    leftRef.current = true
+    onLeaveRef.current()
+  }, [])
+
   return (
     <LiveKitRoom
       token={props.token}
@@ -45,11 +46,23 @@ export function InterviewRoom(props: Props) {
       connect
       video
       audio
-      className="flex min-h-svh flex-col"
-      onDisconnected={props.onLeave}
+      className="flex min-h-svh flex-col bg-[#0b0f14]"
+      onDisconnected={leave}
+      onError={(err) => {
+        const msg = err?.message?.toLowerCase?.() ?? ""
+        if (
+          msg.includes("closed") ||
+          msg.includes("disconnect") ||
+          msg.includes("pc connection")
+        ) {
+          leave()
+          return
+        }
+        console.error(err)
+      }}
     >
       <RoomAudioRenderer />
-      <InterviewInner sessionId={props.sessionId} onLeave={props.onLeave} />
+      <InterviewInner sessionId={props.sessionId} onLeave={leave} />
     </LiveKitRoom>
   )
 }
@@ -65,36 +78,48 @@ function InterviewInner({
   const { localParticipant } = useLocalParticipant()
   const { state, videoTrack } = useVoiceAssistant()
   const localVideoRef = useRef<HTMLVideoElement | null>(null)
-  const [stepIndex, setStepIndex] = useState(0)
-  const [busy, setBusy] = useState(false)
-  const [status, setStatus] = useState("Connecting…")
+  const leavingRef = useRef(false)
+  const captureInFlight = useRef(false)
+
+  const [stage, setStage] = useState<StageId>("precheck")
   const [micOn, setMicOn] = useState(true)
   const [camOn, setCamOn] = useState(true)
 
-  const step = STEPS[stepIndex]
+  const hasAgentVideo = Boolean(videoTrack)
+  const agentListening = state === "listening" || state === "thinking"
 
-  useEffect(() => {
-    setStatus(state ? `Agent: ${state}` : "Waiting for agent…")
-  }, [state])
+  const setLocalVideoEl = useCallback((el: HTMLVideoElement | null) => {
+    localVideoRef.current = el
+  }, [])
 
-  useEffect(() => {
-    const onVis = () => {
-      if (document.hidden) {
-        void addContext(room, {
-          type: "proctor_signal",
-          state: "Candidate switched away from the interview tab.",
-          action: "generate_reply",
-          details: {
-            looking_away: true,
-            severity: "medium",
-            message: "Tab hidden / focus lost",
-          },
-        }).catch(() => undefined)
-      }
+  const endCall = useCallback(async () => {
+    if (leavingRef.current) return
+    leavingRef.current = true
+    try {
+      await localParticipant.setMicrophoneEnabled(false).catch(() => undefined)
+      await localParticipant.setCameraEnabled(false).catch(() => undefined)
+      await room.disconnect(true)
+    } catch {
+      // Already disconnected
+    } finally {
+      onLeave()
     }
-    document.addEventListener("visibilitychange", onVis)
-    return () => document.removeEventListener("visibilitychange", onVis)
-  }, [room])
+  }, [localParticipant, onLeave, room])
+
+  useEffect(() => {
+    const onConn = (conn: ConnectionState) => {
+      if (conn === ConnectionState.Disconnected) void endCall()
+    }
+    const onDisconnected = () => {
+      void endCall()
+    }
+    room.on(RoomEvent.ConnectionStateChanged, onConn)
+    room.on(RoomEvent.Disconnected, onDisconnected)
+    return () => {
+      room.off(RoomEvent.ConnectionStateChanged, onConn)
+      room.off(RoomEvent.Disconnected, onDisconnected)
+    }
+  }, [endCall, room])
 
   const captureNow = useCallback(async () => {
     const el = localVideoRef.current
@@ -102,209 +127,203 @@ function InterviewInner({
     return captureVideoFrame(el)
   }, [])
 
-  const runStepCapture = useCallback(async () => {
-    if (!step || step.id === "done") return
-    setBusy(true)
+  const runStageCapture = useCallback(async () => {
+    if (stage === "done") {
+      return { ok: true, stage, skipped: true }
+    }
+    if (leavingRef.current || room.state === ConnectionState.Disconnected) {
+      return { ok: false, error: "disconnected" }
+    }
+    if (captureInFlight.current) {
+      return { ok: false, error: "busy" }
+    }
+    captureInFlight.current = true
     try {
-      if (step.id === "liveness") {
-        const frames: string[] = []
+      const kind = assetKindForStage(stage)
+      if (!kind) return { ok: true, stage, skipped: true }
+
+      if (stage === "liveness") {
         for (let i = 0; i < 4; i++) {
-          const { dataUrl, blob } = await captureNow()
-          frames.push(dataUrl)
+          const { blob } = await captureNow()
           await uploadAsset(sessionId, "liveness", blob, `liveness_${i}.jpg`)
-          await new Promise((r) => setTimeout(r, 350))
+          await new Promise((r) => setTimeout(r, 300))
         }
-        await addContext(room, {
-          type: "liveness_captured",
-          state: "Liveness frame sequence captured.",
-          action: "generate_reply",
-          details: { images_base64: frames },
-        })
       } else {
-        const { dataUrl, blob } = await captureNow()
-        const map: Record<
-          string,
-          { type: string; kind: string; state: string; view?: string }
-        > = {
-          precheck: {
-            type: "precheck",
-            kind: "precheck",
-            state: "Lighting and framing precheck frame captured.",
-          },
-          face: {
-            type: "face_captured",
-            kind: "face",
-            state: "Face enrollment capture completed.",
-          },
-          kyc: {
-            type: "id_captured",
-            kind: "kyc_id",
-            state: "KYC identity document captured.",
-          },
-          body_front: {
-            type: "body_captured",
-            kind: "body_front",
-            state: "Full body front capture completed.",
-            view: "front",
-          },
-          body_back: {
-            type: "body_captured",
-            kind: "body_back",
-            state: "Full body back capture completed.",
-            view: "back",
-          },
-        }
-        const cfg = map[step.id]
-        if (!cfg) return
-        await uploadAsset(sessionId, cfg.kind, blob, `${cfg.kind}.jpg`, {
-          view: cfg.view,
-        })
-        await addContext(room, {
-          type: cfg.type,
-          state: cfg.state,
-          action: "generate_reply",
-          details: {
-            image_base64: dataUrl,
-            view: cfg.view,
-          },
-        })
+        const { blob } = await captureNow()
+        const meta =
+          stage === "body_front"
+            ? { view: "front" }
+            : stage === "body_back"
+              ? { view: "back" }
+              : undefined
+        await uploadAsset(sessionId, kind, blob, `${kind}.jpg`, meta)
       }
-      setStepIndex((i) => Math.min(i + 1, STEPS.length - 1))
-      setStatus(`Captured ${step.label}`)
+
+      return { ok: true, stage, kind }
     } catch (err) {
       console.error(err)
-      setStatus(err instanceof Error ? err.message : "Capture failed")
+      const message = err instanceof Error ? err.message : "Capture failed"
+      return { ok: false, error: message }
     } finally {
-      setBusy(false)
+      captureInFlight.current = false
     }
-  }, [captureNow, room, sessionId, step])
+  }, [captureNow, room.state, sessionId, stage])
 
-  const stepHint = useMemo(() => {
-    switch (step?.id as StepId) {
-      case "precheck":
-        return "Sit in good light, face the camera, shoulders visible."
-      case "face":
-        return "Hold still for a clear frontal selfie."
-      case "liveness":
-        return "Blink and slowly turn your head while we capture a few frames."
-      case "kyc":
-        return "Hold your government ID steady in frame."
-      case "body_front":
-        return "Stand back so your full body is visible from the front."
-      case "body_back":
-        return "Turn around for a full-body back view."
-      default:
-        return "Interview steps complete. You can end the call and view the report."
+  const runStageCaptureRef = useRef(runStageCapture)
+  runStageCaptureRef.current = runStageCapture
+
+  useEffect(() => {
+    const onSetStage = async (data: RpcInvocationData) => {
+      try {
+        const payload = JSON.parse(data.payload || "{}") as {
+          stage?: string
+          guidance?: string
+        }
+        const next = payload.stage || ""
+        if (!isStageId(next)) {
+          return JSON.stringify({ ok: false, error: `invalid stage: ${next}` })
+        }
+        setStage(next)
+        return JSON.stringify({ ok: true, stage: next })
+      } catch (err) {
+        return JSON.stringify({
+          ok: false,
+          error: err instanceof Error ? err.message : "set_stage failed",
+        })
+      }
     }
-  }, [step])
+
+    const onPrepareCapture = async (data: RpcInvocationData) => {
+      try {
+        const payload = JSON.parse(data.payload || "{}") as { stage?: string }
+        await new Promise((r) => setTimeout(r, 450))
+        return JSON.stringify({
+          ok: true,
+          prepared: true,
+          stage: payload.stage || stage,
+        })
+      } catch (err) {
+        return JSON.stringify({
+          ok: false,
+          error: err instanceof Error ? err.message : "prepare_capture failed",
+        })
+      }
+    }
+
+    const onRequestCapture = async (data: RpcInvocationData) => {
+      try {
+        const payload = JSON.parse(data.payload || "{}") as {
+          message?: string
+          source?: string
+        }
+        if (payload.source && payload.source !== "agent") {
+          return JSON.stringify({
+            ok: false,
+            error: "capture_not_agent_initiated",
+          })
+        }
+        await new Promise((r) => setTimeout(r, 250))
+        const result = await runStageCaptureRef.current()
+        return JSON.stringify(result)
+      } catch (err) {
+        return JSON.stringify({
+          ok: false,
+          error: err instanceof Error ? err.message : "request_capture failed",
+        })
+      }
+    }
+
+    room.registerRpcMethod("set_stage", onSetStage)
+    room.registerRpcMethod("prepare_capture", onPrepareCapture)
+    room.registerRpcMethod("request_capture", onRequestCapture)
+    return () => {
+      room.unregisterRpcMethod("set_stage")
+      room.unregisterRpcMethod("prepare_capture")
+      room.unregisterRpcMethod("request_capture")
+    }
+  }, [room, stage])
 
   return (
-    <div className="grid min-h-svh grid-rows-[auto_1fr_auto] bg-[radial-gradient(ellipse_at_top,_#1a2332_0%,_#0b0f14_55%)] text-zinc-100">
-      <header className="flex items-center justify-between border-b border-white/10 px-4 py-3">
-        <div>
-          <p className="text-xs tracking-[0.2em] text-teal-300/80 uppercase">Mavrik</p>
-          <h1 className="font-serif text-xl text-zinc-50">Underwriting interview</h1>
+    <div className="relative flex min-h-svh flex-col bg-[#0b0f14] text-zinc-100">
+      {/* Primary: local user camera (Meet-style main tile) */}
+      <div className="relative min-h-0 flex-1 overflow-hidden bg-black">
+        <LocalCamera
+          onVideoEl={setLocalVideoEl}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        <div className="pointer-events-none absolute bottom-3 left-3 rounded-md bg-black/55 px-2 py-1 text-xs text-zinc-200">
+          You
         </div>
-        <div className="text-right text-xs text-zinc-400">
-          <div>{status}</div>
-          <div className="mt-1 max-w-xs text-[10px] leading-snug text-amber-200/70">
-            {DISCLOSURE}
-          </div>
-        </div>
-      </header>
 
-      <main className="grid gap-4 p-4 lg:grid-cols-[1.2fr_1fr]">
-        <section className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/40">
-          {videoTrack ? (
-            <VideoTrack
-              trackRef={videoTrack}
-              className="h-full max-h-[70vh] w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-[50vh] items-center justify-center text-zinc-500">
-              Waiting for Anam avatar…
-            </div>
-          )}
-          <div className="absolute bottom-3 left-3 rounded-md bg-black/50 px-2 py-1 text-xs">
-            Avatar
-          </div>
-        </section>
-
-        <section className="flex flex-col gap-3">
-          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black/40">
-            <LocalCamera onVideoEl={(el) => (localVideoRef.current = el)} />
-            <div className="absolute bottom-3 left-3 rounded-md bg-black/50 px-2 py-1 text-xs">
-              You
+        {/* Secondary: agent avatar / video PiP */}
+        <div className="absolute right-3 bottom-24 z-10 w-[28vw] max-w-[220px] min-w-[120px] overflow-hidden rounded-xl border border-white/15 bg-[#151a22] shadow-lg sm:bottom-28 sm:w-[22vw] sm:max-w-[260px]">
+          <div className="relative aspect-video w-full">
+            {hasAgentVideo ? (
+              <VideoTrack
+                trackRef={videoTrack}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-[#151a22]">
+                <div
+                  className={`flex h-14 w-14 items-center justify-center rounded-full border ${
+                    agentListening
+                      ? "animate-pulse border-teal-300/60 bg-teal-400/15"
+                      : "border-white/15 bg-white/5"
+                  }`}
+                >
+                  <span className="font-serif text-lg text-teal-100">M</span>
+                </div>
+              </div>
+            )}
+            <div className="pointer-events-none absolute bottom-1.5 left-1.5 rounded bg-black/55 px-1.5 py-0.5 text-[10px] text-zinc-200">
+              Interviewer
             </div>
           </div>
+        </div>
+      </div>
 
-          <ol className="flex flex-wrap gap-2">
-            {STEPS.map((s, idx) => (
-              <li
-                key={s.id}
-                className={`rounded-full px-3 py-1 text-xs ${
-                  idx === stepIndex
-                    ? "bg-teal-500 text-black"
-                    : idx < stepIndex
-                      ? "bg-teal-500/20 text-teal-200"
-                      : "bg-white/5 text-zinc-400"
-                }`}
-              >
-                {s.label}
-              </li>
-            ))}
-          </ol>
-
-          <p className="text-sm text-zinc-300">{stepHint}</p>
-
-          <div className="mt-auto flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={busy || step?.id === "done"}
-              onClick={() => void runStepCapture()}
-              className="rounded-lg bg-teal-400 px-4 py-2 text-sm font-medium text-black disabled:opacity-40"
-            >
-              {busy ? "Working…" : step?.id === "done" ? "Complete" : `Capture ${step?.label}`}
-            </button>
-            <button
-              type="button"
-              className="rounded-lg border border-white/15 px-4 py-2 text-sm"
-              onClick={async () => {
-                await localParticipant.setMicrophoneEnabled(!micOn)
-                setMicOn(!micOn)
-              }}
-            >
-              {micOn ? "Mute" : "Unmute"}
-            </button>
-            <button
-              type="button"
-              className="rounded-lg border border-white/15 px-4 py-2 text-sm"
-              onClick={async () => {
-                await localParticipant.setCameraEnabled(!camOn)
-                setCamOn(!camOn)
-              }}
-            >
-              {camOn ? "Camera off" : "Camera on"}
-            </button>
-            <a
-              href={`/report/${sessionId}`}
-              className="rounded-lg border border-white/15 px-4 py-2 text-sm"
-            >
-              Report
-            </a>
-            <button
-              type="button"
-              className="rounded-lg border border-rose-400/40 px-4 py-2 text-sm text-rose-200"
-              onClick={() => {
-                void room.disconnect()
-                onLeave()
-              }}
-            >
-              End
-            </button>
-          </div>
-        </section>
-      </main>
+      {/* Controls: Mic · Cam · End only */}
+      <div className="flex items-center justify-center gap-3 border-t border-white/10 bg-[#0b0f14]/95 px-4 py-4 backdrop-blur">
+        <button
+          type="button"
+          aria-label={micOn ? "Mute microphone" : "Unmute microphone"}
+          className={`rounded-full px-5 py-3 text-sm font-medium transition ${
+            micOn
+              ? "bg-white/10 text-zinc-100 hover:bg-white/15"
+              : "bg-rose-500/90 text-white hover:bg-rose-500"
+          }`}
+          onClick={async () => {
+            await localParticipant.setMicrophoneEnabled(!micOn)
+            setMicOn(!micOn)
+          }}
+        >
+          {micOn ? "Mic" : "Unmute"}
+        </button>
+        <button
+          type="button"
+          aria-label={camOn ? "Turn camera off" : "Turn camera on"}
+          className={`rounded-full px-5 py-3 text-sm font-medium transition ${
+            camOn
+              ? "bg-white/10 text-zinc-100 hover:bg-white/15"
+              : "bg-rose-500/90 text-white hover:bg-rose-500"
+          }`}
+          onClick={async () => {
+            await localParticipant.setCameraEnabled(!camOn)
+            setCamOn(!camOn)
+          }}
+        >
+          {camOn ? "Cam" : "Cam on"}
+        </button>
+        <button
+          type="button"
+          aria-label="End call"
+          className="rounded-full bg-rose-600 px-6 py-3 text-sm font-medium text-white hover:bg-rose-500"
+          onClick={() => void endCall()}
+        >
+          End
+        </button>
+      </div>
     </div>
   )
 }

@@ -1,0 +1,185 @@
+{
+  "sigmaFrames": 0.75,
+  "gateLo": 0.01,
+  "gateHi": 0.03,
+  "attackSec": 0.04,
+  "releaseSec": 0.15,
+  "holdSec": 0.08,
+  "jawScale": 2.15,
+  "jawSlewPerFrame": 0.028,
+  "postJawSigmaFrames": 0.35,
+  "fps": 25,
+  "lagFrames": 1,
+  "best": {
+    "sigmaFrames": 0.75,
+    "gateLo": 0.01,
+    "gateHi": 0.03,
+    "attackSec": 0.04,
+    "releaseSec": 0.15,
+    "holdSec": 0.08,
+    "jawScale": 2.15,
+    "jawSlewPerFrame": 0.028,
+    "postJawSigmaFrames": 0.35,
+    "fps": 25,
+    "lagFrames": 1
+  },
+  "metrics": {
+    "train": {
+      "corrJaw": 0.41207628337610985,
+      "velRatio": 1.058730192563084,
+      "accRatio": 0.9784614647772937,
+      "stdRatio": 1.002257959315094,
+      "bigJumps05": 0,
+      "bigJumps03": 0,
+      "score": 0.008063340666111897
+    },
+    "leaveClipOutMean": {
+      "corrJaw": 0.41195958243161274,
+      "velRatio": 1.0584446068092377,
+      "accRatio": 0.9766761830886984,
+      "stdRatio": 1.003518711112726,
+      "bigJumps05": 0,
+      "bigJumps03": 0,
+      "score": 0.11681441248142478
+    },
+    "naturalBigJumps05": 0,
+    "vowels": {
+      "corrJaw": 0.4015330051102195,
+      "velRatio": 1.4771882677729502,
+      "accRatio": 1.6621169265070759,
+      "stdRatio": 0.951541659896884,
+      "bigJumps05": 0,
+      "bigJumps03": 0,
+      "score": 1.553762557443788
+    },
+    "fricatives": {
+      "corrJaw": 0.47824569941550427,
+      "velRatio": 1.723046512381772,
+      "accRatio": 1.3673515356857555,
+      "stdRatio": 1.8692528332378417,
+      "bigJumps05": 0,
+      "bigJumps03": 0,
+      "score": 2.1385608831536103
+    }
+  },
+  "baselineHardGate": {
+    "corrJaw": 0.4310241686964461,
+    "velRatio": 1.2357751184652925,
+    "accRatio": 1.5544862693085695,
+    "stdRatio": 1.06268262892639,
+    "bigJumps05": 4,
+    "perClip": {
+      "01-vowels": {
+        "corrJaw": 0.47498550087546154,
+        "velRatio": 1.5312824956237785,
+        "accRatio": 2.63958374054841,
+        "stdRatio": 1.0898411828848025,
+        "bigJumps05": 2,
+        "bigJumps03": 5,
+        "score": 17.543180724131393
+      },
+      "02-lip-closure": {
+        "corrJaw": 0.5732785713384839,
+        "velRatio": 1.2662533720434301,
+        "accRatio": 1.474333049026343,
+        "stdRatio": 1.1806936350517887,
+        "bigJumps05": 0,
+        "bigJumps03": 6,
+        "score": 1.0369115094937915
+      },
+      "03-lip-rounding": {
+        "corrJaw": 0.5769971948597288,
+        "velRatio": 1.0873307475412641,
+        "accRatio": 1.6368781945609705,
+        "stdRatio": 0.7087103400612303,
+        "bigJumps05": 0,
+        "bigJumps03": 0,
+        "score": 1.1141375716875794
+      },
+      "04-fricatives": {
+        "corrJaw": 0.5307969381486922,
+        "velRatio": 1.9969021788061696,
+        "accRatio": 2.187436896482282,
+        "stdRatio": 2.0513409881410687,
+        "bigJumps05": 1,
+        "bigJumps03": 11,
+        "score": 12.1679617393811
+      },
+      "05-rapid": {
+        "corrJaw": 0.07385513243771451,
+        "velRatio": 1.1537125797851746,
+        "accRatio": 1.5081291372945442,
+        "stdRatio": 0.8092866738545315,
+        "bigJumps05": 0,
+        "bigJumps03": 4,
+        "score": 10.713460764425704
+      },
+      "06-prosody": {
+        "corrJaw": 0.3028948571371352,
+        "velRatio": 1.1649396232563125,
+        "accRatio": 1.396271262539978,
+        "stdRatio": 1.1022794648136343,
+        "bigJumps05": 0,
+        "bigJumps03": 5,
+        "score": 3.620602817235947
+      },
+      "07-sustained": {
+        "corrJaw": 0.5684173015171826,
+        "velRatio": 0.8131794542195279,
+        "accRatio": 1.3797106959756071,
+        "stdRatio": 1.0541840228667518,
+        "bigJumps05": 1,
+        "bigJumps03": 2,
+        "score": 5.533190272581151
+      },
+      "08-natural": {
+        "corrJaw": 0.30982338388287195,
+        "velRatio": 1.3586674976121422,
+        "accRatio": 1.47031642068681,
+        "stdRatio": 1.076792751501347,
+        "bigJumps05": 0,
+        "bigJumps03": 8,
+        "score": 3.921474196802833
+      }
+    }
+  },
+  "grid": {
+    "tried": 1152,
+    "feasible": 40,
+    "sigmaGrid": [
+      0.6,
+      0.75,
+      0.9,
+      1
+    ],
+    "attackGrid": [
+      0.04,
+      0.05
+    ],
+    "releaseGrid": [
+      0.12,
+      0.15
+    ],
+    "jawGrid": [
+      2,
+      2.15,
+      2.3
+    ],
+    "holdGrid": [
+      0.08,
+      0.1
+    ],
+    "postJawGrid": [
+      0,
+      0.35,
+      0.5
+    ],
+    "slewGrid": [
+      0.019,
+      0.022,
+      0.025,
+      0.028
+    ]
+  },
+  "note": "Zero-phase gaussian + soft AR gate + jaw scale after smooth + slew. Soft gate trades ~0.02 jaw corr vs hard snap for zero big jumps. Bake offline when TTS/clip known."
+}

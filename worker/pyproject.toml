@@ -4,7 +4,7 @@ version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
     "httpx>=0.28.1",
-    "livekit-agents[meta,google,silero,images]>=1.8.10",
+    "livekit-agents[google,images,meta,silero]>=1.8.10",
     "livekit-plugins-anam>=1.8.10",
     "livekit-plugins-google>=1.8.10",
     "livekit-plugins-inworld>=1.8.10",
@@ -12,6 +12,7 @@ dependencies = [
     "openai>=1.60.0",
     "pydantic>=2.14.2",
     "python-dotenv>=1.2.4",
+    "pyyaml>=6.0.3",
 ]
 
 [build-system]
@@ -20,3 +21,8 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["utils"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+]

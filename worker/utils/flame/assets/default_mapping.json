@@ -1,0 +1,280 @@
+{
+ "phones": {
+  "sil": {},
+  "p": {
+   "mouthClose": 0.12,
+   "mouthPressLeft": 0.45,
+   "mouthPressRight": 0.45,
+   "jawOpen": 0.02
+  },
+  "b": {
+   "mouthClose": 0.12,
+   "mouthPressLeft": 0.4,
+   "mouthPressRight": 0.4,
+   "jawOpen": 0.04
+  },
+  "m": {
+   "mouthClose": 0.12,
+   "mouthPressLeft": 0.35,
+   "mouthPressRight": 0.35,
+   "jawOpen": 0.02
+  },
+  "f": {
+   "mouthLowerDownLeft": 0.25,
+   "mouthLowerDownRight": 0.25,
+   "jawOpen": 0.12,
+   "mouthUpperUpLeft": 0.2,
+   "mouthUpperUpRight": 0.2
+  },
+  "v": {
+   "mouthLowerDownLeft": 0.28,
+   "mouthLowerDownRight": 0.28,
+   "jawOpen": 0.14,
+   "mouthUpperUpLeft": 0.22,
+   "mouthUpperUpRight": 0.22
+  },
+  "θ": {
+   "mouthStretchLeft": 0.2,
+   "mouthStretchRight": 0.2,
+   "jawOpen": 0.18,
+   "tongueOut": 0.35
+  },
+  "ð": {
+   "mouthStretchLeft": 0.18,
+   "mouthStretchRight": 0.18,
+   "jawOpen": 0.2,
+   "tongueOut": 0.3
+  },
+  "t": {
+   "jawOpen": 0.12,
+   "mouthClose": 0.15
+  },
+  "d": {
+   "jawOpen": 0.15,
+   "mouthClose": 0.1
+  },
+  "n": {
+   "jawOpen": 0.1,
+   "mouthClose": 0.2
+  },
+  "s": {
+   "jawOpen": 0.1,
+   "mouthStretchLeft": 0.25,
+   "mouthStretchRight": 0.25
+  },
+  "z": {
+   "jawOpen": 0.12,
+   "mouthStretchLeft": 0.22,
+   "mouthStretchRight": 0.22
+  },
+  "l": {
+   "jawOpen": 0.2,
+   "mouthStretchLeft": 0.15,
+   "mouthStretchRight": 0.15
+  },
+  "r": {
+   "jawOpen": 0.22,
+   "mouthPucker": 0.25,
+   "mouthFunnel": 0.15
+  },
+  "ɝ": {
+   "jawOpen": 0.28,
+   "mouthPucker": 0.3,
+   "mouthFunnel": 0.2
+  },
+  "ʃ": {
+   "jawOpen": 0.18,
+   "mouthFunnel": 0.45,
+   "mouthPucker": 0.25
+  },
+  "ʒ": {
+   "jawOpen": 0.18,
+   "mouthFunnel": 0.4,
+   "mouthPucker": 0.22
+  },
+  "tʃ": {
+   "jawOpen": 0.16,
+   "mouthFunnel": 0.5,
+   "mouthPucker": 0.3
+  },
+  "dʒ": {
+   "jawOpen": 0.18,
+   "mouthFunnel": 0.45,
+   "mouthPucker": 0.28
+  },
+  "k": {
+   "jawOpen": 0.14,
+   "mouthClose": 0.1
+  },
+  "g": {
+   "jawOpen": 0.16,
+   "mouthClose": 0.08
+  },
+  "ŋ": {
+   "jawOpen": 0.12,
+   "mouthClose": 0.15
+  },
+  "h": {
+   "jawOpen": 0.2
+  },
+  "ʔ": {
+   "jawOpen": 0.08,
+   "mouthClose": 0.25
+  },
+  "w": {
+   "mouthPucker": 0.7,
+   "mouthFunnel": 0.35,
+   "jawOpen": 0.12
+  },
+  "j": {
+   "jawOpen": 0.18,
+   "mouthStretchLeft": 0.3,
+   "mouthStretchRight": 0.3
+  },
+  "ɑ": {
+   "jawOpen": 0.65,
+   "mouthLowerDownLeft": 0.25,
+   "mouthLowerDownRight": 0.25
+  },
+  "ɑː": {
+   "jawOpen": 0.7,
+   "mouthLowerDownLeft": 0.28,
+   "mouthLowerDownRight": 0.28
+  },
+  "æ": {
+   "jawOpen": 0.55,
+   "mouthStretchLeft": 0.35,
+   "mouthStretchRight": 0.35
+  },
+  "ʌ": {
+   "jawOpen": 0.45
+  },
+  "a": {
+   "jawOpen": 0.55,
+   "mouthLowerDownLeft": 0.2,
+   "mouthLowerDownRight": 0.2
+  },
+  "ə": {
+   "jawOpen": 0.28
+  },
+  "ɛ": {
+   "jawOpen": 0.4,
+   "mouthStretchLeft": 0.25,
+   "mouthStretchRight": 0.25
+  },
+  "e": {
+   "jawOpen": 0.35,
+   "mouthStretchLeft": 0.3,
+   "mouthStretchRight": 0.3
+  },
+  "i": {
+   "jawOpen": 0.18,
+   "mouthStretchLeft": 0.55,
+   "mouthStretchRight": 0.55
+  },
+  "iː": {
+   "jawOpen": 0.2,
+   "mouthStretchLeft": 0.6,
+   "mouthStretchRight": 0.6
+  },
+  "ɪ": {
+   "jawOpen": 0.22,
+   "mouthStretchLeft": 0.4,
+   "mouthStretchRight": 0.4
+  },
+  "u": {
+   "jawOpen": 0.2,
+   "mouthPucker": 0.75,
+   "mouthFunnel": 0.4
+  },
+  "uː": {
+   "jawOpen": 0.22,
+   "mouthPucker": 0.8,
+   "mouthFunnel": 0.45
+  },
+  "ʊ": {
+   "jawOpen": 0.22,
+   "mouthPucker": 0.55,
+   "mouthFunnel": 0.35
+  },
+  "o": {
+   "jawOpen": 0.35,
+   "mouthPucker": 0.5,
+   "mouthFunnel": 0.4
+  },
+  "oː": {
+   "jawOpen": 0.38,
+   "mouthPucker": 0.55,
+   "mouthFunnel": 0.42
+  },
+  "ɔ": {
+   "jawOpen": 0.45,
+   "mouthPucker": 0.4,
+   "mouthFunnel": 0.35
+  },
+  "ɔː": {
+   "jawOpen": 0.48,
+   "mouthPucker": 0.42,
+   "mouthFunnel": 0.38
+  },
+  "ɒ": {
+   "jawOpen": 0.5,
+   "mouthPucker": 0.25
+  },
+  "aɪ": {
+   "jawOpen": 0.5,
+   "mouthStretchLeft": 0.35,
+   "mouthStretchRight": 0.35
+  },
+  "aʊ": {
+   "jawOpen": 0.45,
+   "mouthPucker": 0.4,
+   "mouthFunnel": 0.25
+  },
+  "ɔɪ": {
+   "jawOpen": 0.4,
+   "mouthPucker": 0.3,
+   "mouthStretchLeft": 0.25,
+   "mouthStretchRight": 0.25
+  },
+  "eɪ": {
+   "jawOpen": 0.35,
+   "mouthStretchLeft": 0.4,
+   "mouthStretchRight": 0.4
+  },
+  "oʊ": {
+   "jawOpen": 0.32,
+   "mouthPucker": 0.55,
+   "mouthFunnel": 0.4
+  },
+  "ɪə": {
+   "jawOpen": 0.3,
+   "mouthStretchLeft": 0.2,
+   "mouthStretchRight": 0.2
+  },
+  "eə": {
+   "jawOpen": 0.38,
+   "mouthStretchLeft": 0.25,
+   "mouthStretchRight": 0.25
+  },
+  "ʊə": {
+   "jawOpen": 0.28,
+   "mouthPucker": 0.35
+  }
+ },
+ "aliases": {
+  "ɡ": "g",
+  "ɫ": "l",
+  "ɹ": "r",
+  "ɾ": "t",
+  "ʍ": "w",
+  "ʝ": "j",
+  "əʊ": "oʊ",
+  "ɚ": "ɝ",
+  "[silence]": "sil",
+  "silence": "sil"
+ },
+ "language": "en",
+ "unknownFallback": "ə",
+ "version": 1
+}

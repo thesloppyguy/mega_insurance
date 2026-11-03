@@ -61,6 +61,27 @@ export async function addContext(room: Room, payload: AddContextPayload) {
   })
 }
 
+export type PoseContextPayload = {
+  stage: string
+  status: string
+  score: number
+  tips: string[]
+  metrics: Record<string, number | boolean | null>
+  pose_ok: boolean
+  action?: "generate_reply" | "silent" | "context_only"
+}
+
+/** Push MediaPipe pose assessment to the worker so the agent can coach without being asked. */
+export async function sendPoseContext(room: Room, payload: PoseContextPayload) {
+  const agentId = await waitForAgent(room)
+  return room.localParticipant.performRpc({
+    destinationIdentity: agentId,
+    method: "pose_context",
+    payload: JSON.stringify(payload),
+    responseTimeout: 8000,
+  })
+}
+
 export async function captureVideoFrame(
   videoEl: HTMLVideoElement
 ): Promise<{ blob: Blob; dataUrl: string }> {

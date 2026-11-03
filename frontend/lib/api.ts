@@ -1,6 +1,5 @@
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
-  "http://127.0.0.1:8000"
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "/api"
 
 export type CreateSessionResponse = {
   session_id: string
@@ -68,9 +67,10 @@ export async function createSession(participantName: string) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       participant_name: participantName,
-      use_avatar: true,
+      // Gemini Live uses native audio; Anam avatar is opt-in later.
+      use_avatar: false,
       recording_enabled: true,
-      background_audio_enabled: true,
+      background_audio_enabled: false,
     }),
   })
   if (!res.ok) throw new Error(await res.text())

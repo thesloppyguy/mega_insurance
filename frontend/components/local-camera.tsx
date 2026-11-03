@@ -6,27 +6,43 @@ import { Track } from "livekit-client"
 
 type Props = {
   onVideoEl?: (el: HTMLVideoElement | null) => void
+  className?: string
 }
 
-export function LocalCamera({ onVideoEl }: Props) {
+export function LocalCamera({ onVideoEl, className }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const onVideoElRef = useRef(onVideoEl)
+  onVideoElRef.current = onVideoEl
+
   const { localParticipant } = useLocalParticipant()
   const tracks = useTracks([Track.Source.Camera], { onlySubscribed: false })
   const localCam = tracks.find((t) => t.participant.identity === localParticipant.identity)
+  // Stable id — track *object* identity changes often and must not re-attach.
+  const trackId =
+    localCam?.publication?.trackSid ||
+    localCam?.publication?.track?.sid ||
+    localCam?.publication?.track?.mediaStreamTrack?.id ||
+    null
+
+  useEffect(() => {
+    onVideoElRef.current?.(videoRef.current)
+    return () => onVideoElRef.current?.(null)
+  }, [])
 
   useEffect(() => {
     const el = videoRef.current
-    onVideoEl?.(el)
-    if (!el) return
-    const pub = localCam?.publication
-    const track = pub?.track
-    if (track) {
-      track.attach(el)
-      return () => {
-        track.detach(el)
-      }
+    const track = localCam?.publication?.track
+    if (!el || !track || !trackId) return
+
+    track.attach(el)
+    void el.play().catch(() => undefined)
+
+    return () => {
+      track.detach(el)
     }
-  }, [localCam, onVideoEl])
+    // Intentionally keyed only by trackId so agent/status re-renders don't flicker.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- localCam read when trackId changes
+  }, [trackId])
 
   return (
     <video
@@ -35,7 +51,7 @@ export function LocalCamera({ onVideoEl }: Props) {
       autoPlay
       playsInline
       muted
-      className="aspect-video w-full object-cover"
+      className={className ?? "aspect-video w-full object-cover"}
     />
   )
 }
