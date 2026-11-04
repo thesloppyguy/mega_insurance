@@ -1,12 +1,9 @@
 /**
  * Prefetch OptiModel packs + warm AvatarKit before Join — fully offline.
- *
- * OptiModel must not depend on SPATIALREAL_* / SPATIUS_* env vars or
- * SpatialWalk / Spatius cloud (CDN, bootstrap, telemetry). Everything is
- * served from `/optimodel/*` + `/avatar-api/*`.
+ * Assets are served from `/optimodel/*` + `/avatar-api/*`.
  *
  * Lobby flow:
- * 1. Patch fetch: local packs + rewrite/stub SpatialWalk cloud calls
+ * 1. Patch fetch: local packs + rewrite/stub vendor CDN calls
  * 2. Prefetch shape / ply / idle / flame template into memory + Cache API
  * 3. `AvatarSDK.initialize` in host mode (`region` pinned, local endpoint)
  * 4. `AvatarManager.load` from `/avatar-api`
@@ -34,7 +31,7 @@ const SPATIALWALK_CDN_HOSTS = new Set([
 /** Docker / misconfigured SITE_URL origins that must never be fetched from the browser. */
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0", "[::1]"]);
 
-/** Same-origin stand-in for SpatialWalk CDN `/public/...` assets. */
+/** Same-origin stand-in for vendor CDN `/public/...` assets. */
 const LOCAL_FLAME_SDK_BASE = "/optimodel/sdk";
 const UNIFIED_MODEL_PATH = "unified_model_body.pb.gz";
 
@@ -87,7 +84,7 @@ function isOptiModelAssetUrl(url: string): boolean {
 
 /**
  * Normalize OptiModel asset URLs onto the page origin:
- * - Spatius flame CDN → `/optimodel/sdk/*` (COEP require-corp)
+ * - vendor flame CDN → `/optimodel/sdk/*` (COEP require-corp)
  * - `https://localhost:3000/optimodel/...` from stale API/cache → same-origin
  *
  * Absolute localhost remotes must be rewritten: `new URL(absolute)` ignores
@@ -268,8 +265,8 @@ async function loadOptiModelBytes(
 /**
  * Patch window.fetch for OptiModel offline mode:
  * - `/optimodel/*` + `/avatar-api/*` → memory + Cache API
- * - SpatialWalk flame CDN → `/optimodel/sdk/*`
- * - SpatialWalk bootstrap / telemetry → local stubs (no cloud, COEP-safe)
+ * - vendor flame CDN → `/optimodel/sdk/*`
+ * - vendor bootstrap / telemetry → local stubs (no cloud, COEP-safe)
  */
 export function installOptiModelAssetCache(): void {
 	if (fetchCacheInstalled || typeof window === "undefined") return;

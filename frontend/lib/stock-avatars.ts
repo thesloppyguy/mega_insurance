@@ -1,9 +1,8 @@
 /**
- * OptiModel catalog ids → SpatialReal character packs under
- * `public/optimodel/avatars/`.
+ * OptiModel catalog ids → character packs under `public/optimodel/avatars/`.
  */
 export type OptiModelAsset = {
-	/** Spatius / SpatialReal character UUID (AvatarManager.load id). */
+	/** Character UUID (AvatarManager.load id). */
 	characterId: string;
 	/** Path under `/optimodel/` (no leading slash on dir). */
 	dir: string;
