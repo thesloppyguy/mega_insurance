@@ -1,4 +1,6 @@
-# Mavrik
+# Mega Insurance
+
+**Proof of concept — not for commercial use.** See [`LICENSE`](./LICENSE).
 
 Live video underwriting interview: AI agent + OptiModel avatar + identity capture + post-call report.
 

@@ -32,7 +32,8 @@ export default function ReportPage() {
         const data = await fetchReport(params.sessionId)
         if (!cancelled) setReport(data)
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load")
+        if (!cancelled)
+          setError(err instanceof Error ? err.message : "Failed to load")
       }
     }
     void load()
@@ -43,7 +44,8 @@ export default function ReportPage() {
     }
   }, [params.sessionId])
 
-  const uw = report?.underwriting_report as UnderwritingReport | null | undefined
+  const uw = report?.underwriting_report as
+    UnderwritingReport | null | undefined
   const estimates = uw?.body_scan?.estimates || {}
   const sam = uw?.proctoring?.sam_validation
   const outcome = uw?.underwriting_outcome
@@ -58,9 +60,15 @@ export default function ReportPage() {
       : humanize(idStatus) || "Pending"
   const rec = String(outcome?.recommendation || "").toLowerCase()
   const reviewRequired = /(review|refer|decline|reject)/.test(rec)
-  const reviewLabel = !rec ? "Pending" : reviewRequired ? "Required" : "Not required"
+  const reviewLabel = !rec
+    ? "Pending"
+    : reviewRequired
+      ? "Required"
+      : "Not required"
   const confidence =
-    typeof ocr?.confidence === "number" ? `${Math.round(ocr.confidence * 100)}%` : "—"
+    typeof ocr?.confidence === "number"
+      ? `${Math.round(ocr.confidence * 100)}%`
+      : "—"
 
   const idAsset = latestAssetId(report?.assets, "id")
   const bodyAsset = latestAssetId(report?.assets, "body")
@@ -72,12 +80,14 @@ export default function ReportPage() {
   const physical = uw?.body_scan?.physical_conditions || []
 
   return (
-    <div className={`${reportFont.className} min-h-svh bg-slate-100 text-slate-900 print:bg-white`}>
+    <div
+      className={`${reportFont.className} min-h-svh bg-slate-100 text-slate-900 print:bg-white`}
+    >
       <div className="h-1.5 bg-indigo-600" />
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-6 py-4">
           <span className="text-lg font-semibold tracking-[0.18em] text-slate-900 uppercase">
-            Mavrik
+            Mega Insurance
           </span>
           <div className="flex items-center gap-4">
             <span className="hidden text-xs font-semibold tracking-[0.18em] text-slate-500 uppercase sm:inline">
@@ -109,7 +119,9 @@ export default function ReportPage() {
       <main className="mx-auto max-w-4xl space-y-5 px-6 py-8">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Post Processing Report</h1>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Post Processing Report
+            </h1>
             <p className="mt-1 text-sm text-slate-500">Session {sessionId}</p>
           </div>
           {report ? (
@@ -128,12 +140,18 @@ export default function ReportPage() {
             {error}
           </p>
         ) : null}
-        {!report ? <p className="text-sm text-slate-500">Loading report…</p> : null}
+        {!report ? (
+          <p className="text-sm text-slate-500">Loading report…</p>
+        ) : null}
 
         {report ? (
           <>
             <div className="grid gap-4 sm:grid-cols-3">
-              <Kpi label="Identity" value={identityLabel} tone={toneFor(uw?.kyc?.status)} />
+              <Kpi
+                label="Identity"
+                value={identityLabel}
+                tone={toneFor(uw?.kyc?.status)}
+              />
               <Kpi label="ID confidence" value={confidence} tone="neutral" />
               <Kpi
                 label="Underwriter review"
@@ -146,7 +164,12 @@ export default function ReportPage() {
               <Rows
                 columns={2}
                 rows={[
-                  ["Session ID", <span key="s" className="font-mono text-xs">{sessionId}</span>],
+                  [
+                    "Session ID",
+                    <span key="s" className="font-mono text-xs">
+                      {sessionId}
+                    </span>,
+                  ],
                   ["Started", formatDate(report.created_at)],
                   ["End user", report.participant_name || "—"],
                   ["Ended", formatDate(report.updated_at)],
@@ -185,9 +208,35 @@ export default function ReportPage() {
               <div className="grid gap-6 md:grid-cols-[1fr_260px]">
                 <Rows
                   rows={[
-                    ["Identity", <Badge key="i" tone={toneFor(uw?.kyc?.status)}>{identityLabel}</Badge>],
-                    ["Liveness", <Badge key="l" tone={sam?.liveness_proxy_ok === false ? "bad" : sam?.liveness_proxy_ok ? "good" : "neutral"}>{sam?.liveness_proxy_ok === undefined ? "Pending" : sam.liveness_proxy_ok ? "Passed" : "Failed"}</Badge>],
-                    ["Face match", humanize(uw?.face_matching?.status) || "Pending"],
+                    [
+                      "Identity",
+                      <Badge key="i" tone={toneFor(uw?.kyc?.status)}>
+                        {identityLabel}
+                      </Badge>,
+                    ],
+                    [
+                      "Liveness",
+                      <Badge
+                        key="l"
+                        tone={
+                          sam?.liveness_proxy_ok === false
+                            ? "bad"
+                            : sam?.liveness_proxy_ok
+                              ? "good"
+                              : "neutral"
+                        }
+                      >
+                        {sam?.liveness_proxy_ok === undefined
+                          ? "Pending"
+                          : sam.liveness_proxy_ok
+                            ? "Passed"
+                            : "Failed"}
+                      </Badge>,
+                    ],
+                    [
+                      "Face match",
+                      humanize(uw?.face_matching?.status) || "Pending",
+                    ],
                     ["Match score", fmt(uw?.face_matching?.match_score)],
                     ["Face coverage", pct(sam?.face_coverage) as string],
                     ["Person coverage", pct(sam?.person_coverage) as string],
@@ -209,15 +258,24 @@ export default function ReportPage() {
                 ]}
               />
               {estimates.fitness_assessment ? (
-                <Callout>Fitness assessment: {String(estimates.fitness_assessment)}</Callout>
+                <Callout>
+                  Fitness assessment: {String(estimates.fitness_assessment)}
+                </Callout>
               ) : null}
             </Card>
 
             <Card title="Body — physical condition">
               {physical.length ? (
-                <Rows rows={physical.map((c, i): Row => [i === 0 ? "Findings" : "", c])} />
+                <Rows
+                  rows={physical.map((c, i): Row => [
+                    i === 0 ? "Findings" : "",
+                    c,
+                  ])}
+                />
               ) : (
-                <p className="text-sm text-slate-500">No observations recorded.</p>
+                <p className="text-sm text-slate-500">
+                  No observations recorded.
+                </p>
               )}
             </Card>
 
@@ -226,11 +284,31 @@ export default function ReportPage() {
                 <div>
                   <Rows
                     rows={[
-                      ["Identity", <Badge key="i" tone={toneFor(uw?.kyc?.status)}>{identityLabel}</Badge>],
-                      ["Body scan", <Badge key="b" tone={toneFor(uw?.body_scan?.status)}>{humanize(uw?.body_scan?.status) || "Pending"}</Badge>],
+                      [
+                        "Identity",
+                        <Badge key="i" tone={toneFor(uw?.kyc?.status)}>
+                          {identityLabel}
+                        </Badge>,
+                      ],
+                      [
+                        "Body scan",
+                        <Badge key="b" tone={toneFor(uw?.body_scan?.status)}>
+                          {humanize(uw?.body_scan?.status) || "Pending"}
+                        </Badge>,
+                      ],
                       ["Risk indicators", listOrDash(outcome?.risk_indicators)],
                       ["Exception flags", listOrDash(outcome?.exception_flags)],
-                      ["Review", <Badge key="r" tone={!rec ? "neutral" : reviewRequired ? "warn" : "good"}>{reviewLabel}</Badge>],
+                      [
+                        "Review",
+                        <Badge
+                          key="r"
+                          tone={
+                            !rec ? "neutral" : reviewRequired ? "warn" : "good"
+                          }
+                        >
+                          {reviewLabel}
+                        </Badge>,
+                      ],
                     ]}
                   />
                   {outcome?.notes ? <Callout>{outcome.notes}</Callout> : null}
@@ -241,21 +319,37 @@ export default function ReportPage() {
 
             <Card
               title="Media integrity"
-              status={sam?.status || (uw?.sam_summary?.skipped ? "skipped" : "pending")}
+              status={
+                sam?.status ||
+                (uw?.sam_summary?.skipped ? "skipped" : "pending")
+              }
               subtitle={`Engine ${uw?.engine?.sam || "sam-3.1"} · source ${String(
                 uw?.engine?.sam_source || uw?.sam_summary?.source || "—"
               ).replace(/_/g, " ")}`}
             >
               <Rows
                 rows={[
-                  ["Multiple persons", <Badge key="m" tone={sam?.multiple_persons ? "warn" : "good"}>{sam?.multiple_persons ? "Yes" : "No"}</Badge>],
+                  [
+                    "Multiple persons",
+                    <Badge
+                      key="m"
+                      tone={sam?.multiple_persons ? "warn" : "good"}
+                    >
+                      {sam?.multiple_persons ? "Yes" : "No"}
+                    </Badge>,
+                  ],
                   ["ID card frames", fmt(sam?.id_card_frames)],
                   [
                     "Flags",
                     (sam?.flags || []).length ? (
-                      <span key="f" className="flex flex-wrap justify-end gap-1.5">
+                      <span
+                        key="f"
+                        className="flex flex-wrap justify-end gap-1.5"
+                      >
                         {(sam?.flags || []).map((flag) => (
-                          <Badge key={flag} tone="warn">{humanize(flag)}</Badge>
+                          <Badge key={flag} tone="warn">
+                            {humanize(flag)}
+                          </Badge>
                         ))}
                       </span>
                     ) : (
@@ -272,7 +366,9 @@ export default function ReportPage() {
                   ],
                 ]}
               />
-              {uw?.proctoring?.summary ? <Callout>{uw.proctoring.summary}</Callout> : null}
+              {uw?.proctoring?.summary ? (
+                <Callout>{uw.proctoring.summary}</Callout>
+              ) : null}
               <SamVideoPreview
                 sessionId={sessionId}
                 overlayAssetId={
@@ -298,22 +394,32 @@ export default function ReportPage() {
                 User responses
               </h2>
               <p className="mb-3 text-sm text-slate-500">
-                {responses.length} answer{responses.length === 1 ? "" : "s"} captured during the session
+                {responses.length} answer{responses.length === 1 ? "" : "s"}{" "}
+                captured during the session
               </p>
               {responses.length ? (
                 <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
                   <table className="w-full text-left text-sm">
                     <thead className="bg-slate-900 text-[11px] tracking-wider text-white uppercase">
                       <tr>
-                        <th className="w-1/2 px-4 py-2.5 font-semibold">Question</th>
+                        <th className="w-1/2 px-4 py-2.5 font-semibold">
+                          Question
+                        </th>
                         <th className="px-4 py-2.5 font-semibold">Answer</th>
                       </tr>
                     </thead>
                     <tbody>
                       {responses.map((r, i) => (
-                        <tr key={i} className="border-t border-slate-100 align-top even:bg-slate-50">
-                          <td className="px-4 py-3 font-medium text-slate-900">{r.question}</td>
-                          <td className="px-4 py-3 text-slate-700">{r.answer}</td>
+                        <tr
+                          key={i}
+                          className="border-t border-slate-100 align-top even:bg-slate-50"
+                        >
+                          <td className="px-4 py-3 font-medium text-slate-900">
+                            {r.question}
+                          </td>
+                          <td className="px-4 py-3 text-slate-700">
+                            {r.answer}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -327,7 +433,7 @@ export default function ReportPage() {
             </section>
 
             <footer className="pt-2 pb-6 text-center text-xs text-slate-400">
-              Mavrik · {DISCLOSURE}
+              Mega Insurance · {DISCLOSURE}
             </footer>
           </>
         ) : null}
@@ -341,14 +447,16 @@ type Response = { question: string; answer: string }
 /** Pair each user turn with the agent line that prompted it. */
 function buildResponses(report: SessionReport | null): Response[] {
   const chat = report?.livekit_report?.chat_history as
-    | { items?: Array<Record<string, unknown>> }
-    | undefined
+    { items?: Array<Record<string, unknown>> } | undefined
   const out: Response[] = []
   let lastAgent = ""
   for (const item of chat?.items || []) {
     if (item.type !== "message") continue
     const text = Array.isArray(item.content)
-      ? item.content.filter((c) => typeof c === "string").join(" ").trim()
+      ? item.content
+          .filter((c) => typeof c === "string")
+          .join(" ")
+          .trim()
       : ""
     if (!text) continue
     if (item.role === "assistant") lastAgent = text
@@ -414,14 +522,20 @@ function toneFor(value?: string | null): Tone {
   const v = String(value || "").toLowerCase()
   if (!v) return "neutral"
   if (/(fail|reject|decline|error|deny)/.test(v)) return "bad"
-  if (/(^|_)(ok|pass|passed|verified|approve|approved|complete|completed|clear|active)($|_)/.test(v))
+  if (
+    /(^|_)(ok|pass|passed|verified|approve|approved|complete|completed|clear|active)($|_)/.test(
+      v
+    )
+  )
     return "good"
   if (/(review|refer|pending|flag|started|skipped|warn)/.test(v)) return "warn"
   return "neutral"
 }
 
 function humanize(value?: string | null) {
-  const s = String(value ?? "").replace(/_/g, " ").trim()
+  const s = String(value ?? "")
+    .replace(/_/g, " ")
+    .trim()
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : ""
 }
 
@@ -445,7 +559,15 @@ function Badge({
   )
 }
 
-function Kpi({ label, value, tone }: { label: string; value: string; tone: Tone }) {
+function Kpi({
+  label,
+  value,
+  tone,
+}: {
+  label: string
+  value: string
+  tone: Tone
+}) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white px-5 py-4">
       <div className={`h-1 w-7 rounded ${KPI_BAR[tone]}`} />
@@ -480,7 +602,9 @@ function Card({
             <span className="h-5 w-1 rounded bg-indigo-600" />
             {title}
           </h2>
-          {subtitle ? <p className="mt-1 pl-3 text-xs text-slate-500">{subtitle}</p> : null}
+          {subtitle ? (
+            <p className="mt-1 pl-3 text-xs text-slate-500">{subtitle}</p>
+          ) : null}
         </div>
         {badge ? (
           <Badge tone={badgeTone} upper>
@@ -524,7 +648,9 @@ function Callout({ children }: { children: React.ReactNode }) {
 function Figure({ caption, src }: { caption: string; src: string | null }) {
   return (
     <figure>
-      <figcaption className="mb-1.5 text-xs text-slate-500 italic">{caption}</figcaption>
+      <figcaption className="mb-1.5 text-xs text-slate-500 italic">
+        {caption}
+      </figcaption>
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -543,7 +669,8 @@ function Figure({ caption, src }: { caption: string; src: string | null }) {
 
 function fmt(value: unknown) {
   if (value === null || value === undefined || value === "") return "—"
-  if (typeof value === "number") return Number.isInteger(value) ? String(value) : value.toFixed(1)
+  if (typeof value === "number")
+    return Number.isInteger(value) ? String(value) : value.toFixed(1)
   return String(value)
 }
 
@@ -604,7 +731,8 @@ function EgressFilesPanel({ files }: { files: EgressFile[] }) {
       {files.map((file, index) => {
         const status = String(file.status || "unknown")
         const title =
-          (file.role || "recording").replace(/_/g, " ") || `Recording ${index + 1}`
+          (file.role || "recording").replace(/_/g, " ") ||
+          `Recording ${index + 1}`
         const filename = filenameFromPath(file.filepath)
         const sizeLabel = formatBytes(file.sizeBytes)
         const playable = Boolean(file.available && file.playableUrl)
@@ -617,7 +745,7 @@ function EgressFilesPanel({ files }: { files: EgressFile[] }) {
           >
             <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 px-4 py-3">
               <div className="min-w-0">
-                <p className="text-sm font-semibold capitalize text-slate-900">
+                <p className="text-sm font-semibold text-slate-900 capitalize">
                   {title}
                 </p>
                 <p className="mt-0.5 truncate font-mono text-xs text-slate-500">
@@ -675,12 +803,14 @@ function EgressFilesPanel({ files }: { files: EgressFile[] }) {
                 )
               ) : status === "failed" ? (
                 <p className="text-sm text-rose-600">
-                  {file.detail || file.error || "Egress failed to start or upload."}
+                  {file.detail ||
+                    file.error ||
+                    "Egress failed to start or upload."}
                 </p>
               ) : (
                 <p className="text-sm text-slate-500">
-                  Recording is processing or not yet available in storage. Refresh
-                  in a moment.
+                  Recording is processing or not yet available in storage.
+                  Refresh in a moment.
                 </p>
               )}
             </div>

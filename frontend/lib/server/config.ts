@@ -61,7 +61,7 @@ export const MUSE_OCR_MODEL =
 
 export const ANAM_AVATAR_ID = process.env.ANAM_AVATAR_ID || ""
 export const ANAM_AVATAR_NAME =
-  process.env.ANAM_AVATAR_NAME || "Mavrik Interviewer"
+  process.env.ANAM_AVATAR_NAME || "Mega Insurance Interviewer"
 
 export const DEFAULT_ORG_ID = process.env.DEFAULT_ORG_ID || "org_local"
 export const DEFAULT_CAMPAIGN_ID =

@@ -10,7 +10,7 @@ const CASCADE_INSTRUCTIONS =
   "Use the available tools for captures and OTP. Speak clearly. Do not invent medical diagnoses."
 
 const CASCADE_GREETING =
-  "Hello, and welcome. I am Sanjay from Mavrik, your interview guide. " +
+  "Hello, and welcome. I am Sanjay from Mega Insurance, your interview guide. " +
   "I will walk you through identity and body captures. Are you ready?"
 
 export function buildAgentDispatchMetadata(session: SessionRecord) {
