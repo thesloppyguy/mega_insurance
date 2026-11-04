@@ -1,53 +1,86 @@
 import asyncio
 import json
 import logging
+import math
 import time
 from typing import Any
 
-from livekit import rtc
 from dotenv import load_dotenv
-from livekit import agents
+from livekit import agents, rtc
 from livekit.agents import (
     AgentServer,
     AgentSession,
-    Agent,
     room_io,
     TurnHandlingOptions,
 )
-from livekit.plugins import google, meta, inworld
+from livekit.agents.utils.hw import get_cpu_monitor
+from livekit.agents.worker import ServerEnvOption
+
+from agents.assistant import Assistant
+from utils.backend_client import backend_from_env
 from utils.helper import (
-    on_session_end,
     SESSION_END_STATE,
-    serialize_history,
     normalize_usage_payload,
+    on_session_end,
+    serialize_history,
 )
 from utils.lipsync_bridge import LipsyncBridge
-from agents.assistant import Assistant
+from utils.metadata import parse_job_metadata, resolve_caller_name, resolve_session_id
+from utils.prewarm import get_pipeline, prewarm, warm_pipeline_connections
 
 load_dotenv(".env")
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-
-## CONSTANTS ##
 MAX_DURATION_SECONDS = 600
 INACTIVITY_END_STRIKES = 3
 
+server = AgentServer(
+    # Keep at least one warm process in dev so local sessions skip cold spawn.
+    num_idle_processes=ServerEnvOption(
+        dev_default=1,
+        prod_default=max(1, math.ceil(get_cpu_monitor().cpu_count())),
+    ),
+    # Import into the forkserver image (Linux) so child processes inherit warm state.
+    preload_modules=[
+        "utils.backend_client",
+        "utils.flame.flame_model",
+        "utils.flame.lipsync",
+        "utils.flame.stream",
+        "utils.inworld_llm",
+        "utils.lipsync_bridge",
+        "utils.prewarm",
+    ],
+)
+server.setup_fnc = prewarm
 
-server = AgentServer()
 
-
-@server.rtc_session(agent_name="agent-test", on_session_end=on_session_end)
+@server.rtc_session(agent_name="mavrik", on_session_end=on_session_end)
 async def my_agent(ctx: agents.JobContext):
-    ctx.log_context_fields = {"room": ctx.room.name}
-    metadata = ctx.job.metadata
+    metadata = parse_job_metadata(ctx.job.metadata)
+    session_id = resolve_session_id(metadata, fallback=ctx.room.name)
+    caller_name = resolve_caller_name(metadata)
+    recording_enabled = metadata.get("recording_enabled", True) is not False
 
-    ctx.log_context_fields |= {
-        "session_id": str(metadata.session_id),
+    ctx.log_context_fields = {
+        "room": ctx.room.name,
+        "session_id": session_id,
     }
 
+    # Reuse process-prewarmed plugins; open LLM/TTS connections while we join the room.
+    stt, llm, tts = get_pipeline(ctx.proc)
+    warm_pipeline_connections(stt=stt, llm=llm, tts=tts)
+
     await ctx.connect()
+
+    backend = backend_from_env()
+    if session_id:
+        await backend.patch_session_lifecycle(
+            session_id,
+            status="active",
+            livekit_job_id=ctx.job.id,
+        )
 
     room_options = room_io.RoomOptions(
         text_input=True,
@@ -55,12 +88,14 @@ async def my_agent(ctx: agents.JobContext):
         delete_room_on_close=True,
     )
 
-    agent = Assistant()
+    agent = Assistant(caller_name=caller_name)
 
     session = AgentSession(
-        stt=meta.STT(model="muse-voice-transcribe-1.0"),
-        llm=google.LLM(model="gemini-3.5-flash-lite"),
-        tts=inworld.TTS(model="inworld-tts-2-flash", voice_id="Aarav"),
+        stt=stt,
+        llm=llm,
+        tts=tts,
+        expressive=True,
+        use_tts_aligned_transcript=True,
         user_away_timeout=20,
         aec_warmup_duration=2.0,
         turn_handling=TurnHandlingOptions(
@@ -74,34 +109,33 @@ async def my_agent(ctx: agents.JobContext):
         ),
     )
 
-    lipsync_bridge = LipsyncBridge(ctx.room, send_phonemes=True)
+    lipsync_bridge = LipsyncBridge(ctx.room, send_phonemes=False)
     lipsync_bridge.attach(session)
 
     metrics_buffer: list[dict[str, Any]] = []
-    # One-shot frontend events should not drive multiple generate_reply turns.
     _ONESHOT_CONTEXT_TYPES = frozenset(
         {
             "id_captured",
             "face_captured",
             "body_captured",
+            "aadhaar_otp_verified",
+            "aadhaar_otp_failed",
+            # Legacy event names (pre-Deepvue); keep for in-flight sessions.
             "otp_submitted",
             "otp_resend_requested",
         }
     )
     _recent_context_events: dict[str, float] = {}
     _CONTEXT_DEDUPE_WINDOW_S = 5.0
-    # Serialize deferred context applies so replies don't race mid-speech.
     _context_apply_lock = asyncio.Lock()
 
     async def _wait_for_agent_speech_idle() -> None:
-        """Wait until in-flight speech is fully generated/flushed/played out."""
         while True:
             handle = session.current_speech
             if handle is not None and not handle.done():
                 logger.info("add_context waiting for current speech to finish")
                 await handle.wait_for_playout()
                 continue
-            # Thinking/speaking without a handle yet: generation not flushed.
             if session.agent_state in ("thinking", "speaking"):
                 await asyncio.sleep(0.05)
                 continue
@@ -118,14 +152,8 @@ async def my_agent(ctx: agents.JobContext):
             await _wait_for_agent_speech_idle()
 
             chat_ctx = agent.chat_ctx.copy()
-            if event_type == "otp_submitted" and detail.get("code") is not None:
-                system_content = (
-                    f"Frontend event ({event_type}): {event} "
-                    f"Submitted code: {detail.get('code')!r}."
-                )
-            elif event_type == "id_captured" and isinstance(detail.get("ocr"), dict):
+            if event_type == "id_captured" and isinstance(detail.get("ocr"), dict):
                 ocr = detail["ocr"]
-                print("ocr", ocr)
                 system_content = (
                     f"Frontend event ({event_type}): {event} "
                     "ID card Details for further verification: "
@@ -140,7 +168,7 @@ async def my_agent(ctx: agents.JobContext):
                 if event_type == "id_captured":
                     if isinstance(detail.get("ocr"), dict):
                         instructions = (
-                            f"{event} Briefly acknowledge that identity capture completed. "
+                            f"{event} Briefly acknowledge that identity capture completed in the user's language if known. "
                             "Use the OCR result in the system message to check whether the "
                             "scanned ID type matches what you requested. If it does not match, "
                             "politely ask the candidate to present the correct document. "
@@ -148,53 +176,51 @@ async def my_agent(ctx: agents.JobContext):
                         )
                     else:
                         instructions = (
-                            f"{event} Briefly acknowledge that identity capture completed "
+                            f"{event} Briefly acknowledge that identity capture completed in the user's language if known."
                             "and continue with the next step of the conversation."
                         )
                 elif event_type == "face_captured":
                     instructions = (
-                        f"{event} Briefly acknowledge that face capture completed "
+                        f"{event} Briefly acknowledge that face capture completed in the user's language if known."
                         "and continue with the next step of the conversation."
                     )
                 elif event_type == "body_captured":
                     instructions = (
-                        f"{event} Briefly acknowledge that full body capture completed "
+                        f"{event} Briefly acknowledge that full body capture completed in the user's language if known."
                         "and continue with the next step of the conversation."
+                    )
+                elif event_type == "aadhaar_otp_verified":
+                    instructions = (
+                        f"{event} Confirm that Aadhaar verification succeeded in the user's language if known, "
+                        "then continue with the next script step."
+                    )
+                elif event_type == "aadhaar_otp_failed":
+                    instructions = (
+                        f"{event} Tell the candidate the one-time password was not accepted in the user's language if known. "
+                        "Offer one resend or retry. Do not proceed to QnA until verification succeeds, "
+                        "unless they explicitly decline."
                     )
                 elif event_type == "otp_submitted":
                     instructions = (
-                        f"{event} The submitted code is in the system message above. "
-                        "Validate it if you can, then tell the candidate the result "
-                        "and continue."
+                        f"{event} Acknowledge the submission in the user's language if known "
+                        "and wait for the verified or failed result from the frontend."
                     )
                 elif event_type == "otp_resend_requested":
-                    instructions = (
-                        f"{event} Resend the one-time password if possible, then "
-                        "tell the candidate to check for a new code."
-                    )
+                    instructions = f"{event} Tell the candidate to check for a new code in the user's language if known."
                 else:
                     instructions = (
                         f"The frontend reported: {event}. "
-                        "Briefly tell the candidate what to do."
+                        "Briefly tell the candidate what to do in the user's language if known."
                     )
-                # Gemini Live / audio realtime cannot honor allow_interruptions=False.
-                allow_interruptions = True
                 session.generate_reply(
                     instructions=instructions,
-                    allow_interruptions=allow_interruptions,
+                    allow_interruptions=True,
                     chat_ctx=chat_ctx,
                 )
             elif action == "say":
-                session.say(
-                    event,
-                    allow_interruptions=False,
-                )
+                session.say(event, allow_interruptions=False)
 
     async def add_context(rpc_data: rtc.RpcInvocationData) -> str:
-        # LiveKit RPC handlers MUST return a str. Returning SpeechHandle from
-        # generate_reply()/say() surfaces as Application Error on the client
-        # (OTP submit / face capture / proctoring all break).
-        # Also return immediately: waiting for playout here can exceed RPC timeout.
         payload = json.loads(rpc_data.payload)
         event = payload["state"]
         action = payload["action"]
@@ -252,8 +278,6 @@ async def my_agent(ctx: agents.JobContext):
     @session.on("user_state_changed")
     def _on_user_state_changed(ev):
         nonlocal away_strikes
-        if ev.new_state == "speaking":
-            agent.maybe_speak_greeting_on_first_speech()
         if ev.new_state == "away":
             away_strikes += 1
             logger.info(
@@ -263,10 +287,12 @@ async def my_agent(ctx: agents.JobContext):
                 logger.info("user away too long; ending session")
                 session.shutdown()
                 return
-            # First two (or all but last) away events: speak the warning.
             try:
-                return session.generate_reply(
-                    "Ask the user if they are still there and if not in users language.",
+                session.generate_reply(
+                    instructions=(
+                        "Ask the user if they are still there, "
+                        "in the user's language if known."
+                    ),
                     allow_interruptions=True,
                 )
             except Exception:
@@ -285,15 +311,35 @@ async def my_agent(ctx: agents.JobContext):
 
     max_duration_task = asyncio.create_task(_end_on_max_duration())
 
+    async def _start_composite_egress() -> None:
+        if not recording_enabled or not session_id:
+            return
+        # Wait briefly so participant tracks are published.
+        await asyncio.sleep(2.0)
+        result = await backend.start_session_egress(
+            session_id,
+            composite=True,
+            audio_only=False,
+        )
+        if result:
+            logger.info(
+                "composite egress started session_id=%s result=%s", session_id, result
+            )
+        else:
+            logger.warning("composite egress failed to start session_id=%s", session_id)
+
+    egress_task = asyncio.create_task(_start_composite_egress())
+
     @session.on("close")
     def _on_session_close(_ev):
         if max_duration_task is not None and not max_duration_task.done():
             max_duration_task.cancel()
-        # Snapshot conversation + usage + metrics for on_session_end.
-        # Do NOT post a metrics_flush report here — that can overwrite transcripts.
+        if egress_task is not None and not egress_task.done():
+            egress_task.cancel()
         history_payload = serialize_history(getattr(session, "history", None))
         usage_payload = normalize_usage_payload(getattr(session, "usage", None))
         SESSION_END_STATE[ctx.job.id] = {
+            "session_id": session_id,
             "history": history_payload,
             "usage": usage_payload,
             "metrics": list(metrics_buffer),

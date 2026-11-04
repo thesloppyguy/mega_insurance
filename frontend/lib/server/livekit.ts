@@ -44,7 +44,7 @@ function encodedFileOutput(filepath: string) {
     throw new Error(
       "LiveKit Cloud egress needs object storage. Set EGRESS_S3_ACCESS_KEY, " +
         "EGRESS_S3_SECRET, EGRESS_S3_BUCKET, and EGRESS_S3_REGION " +
-        "(plus EGRESS_S3_ENDPOINT / EGRESS_S3_FORCE_PATH_STYLE for R2/MinIO)."
+        "(plus EGRESS_S3_ENDPOINT; set EGRESS_S3_FORCE_PATH_STYLE=true for R2/MinIO/Neon)."
     )
   }
 
@@ -59,6 +59,7 @@ function encodedFileOutput(filepath: string) {
         bucket: EGRESS_S3_BUCKET,
         region: EGRESS_S3_REGION || undefined,
         endpoint: EGRESS_S3_ENDPOINT || undefined,
+        // Path-style → https://endpoint/bucket/key (required for Neon TLS).
         forcePathStyle: EGRESS_S3_FORCE_PATH_STYLE,
       }),
     },
@@ -94,6 +95,66 @@ export async function mintToken(input: {
     ],
   })
   return at.toJwt()
+}
+
+export async function startRoomCompositeEgress(input: {
+  room_name: string
+  session_id?: string
+  audio_only?: boolean
+}): Promise<Record<string, unknown>> {
+  ensureDirs()
+  const sessionPart = input.session_id || input.room_name
+  const filepath = `mavrik/${sessionPart}/${input.room_name}.mp4`
+
+  if (!s3Configured()) {
+    console.error(
+      "skipping composite egress: S3 storage not configured (required on LiveKit Cloud)"
+    )
+    return {
+      role: "room_composite",
+      egress_id: null,
+      filepath,
+      status: "failed",
+      error: "egress_storage_not_configured",
+    }
+  }
+
+  requireLiveKitCreds()
+  const egress = new EgressClient(
+    httpHost(LIVEKIT_URL),
+    LIVEKIT_API_KEY,
+    LIVEKIT_API_SECRET
+  )
+
+  try {
+    const info = await egress.startRoomCompositeEgress(
+      input.room_name,
+      encodedFileOutput(filepath),
+      {
+        layout: "speaker",
+        audioOnly: Boolean(input.audio_only),
+      }
+    )
+    return {
+      role: "room_composite",
+      egress_id: info.egressId ?? null,
+      filepath,
+      status: "started",
+    }
+  } catch (err) {
+    console.error(
+      `failed to start room composite egress room=${input.room_name}`,
+      err
+    )
+    return {
+      role: "room_composite",
+      egress_id: null,
+      filepath,
+      status: "failed",
+      error: "egress_start_failed",
+      detail: err instanceof Error ? err.message : String(err),
+    }
+  }
 }
 
 export async function startTrackEgresses(input: {

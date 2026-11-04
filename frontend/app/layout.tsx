@@ -1,16 +1,13 @@
-import { Geist, Geist_Mono } from "next/font/google"
+import { Baloo_2 } from "next/font/google"
+import { Toaster } from "sonner"
 
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 
-const fontSans = Geist({
+const fontSans = Baloo_2({
   subsets: ["latin"],
   variable: "--font-sans",
-})
-
-const fontMono = Geist_Mono({
-  subsets: ["latin"],
-  variable: "--font-mono",
+  weight: ["400", "500", "600", "700", "800"],
 })
 
 export default function RootLayout({
@@ -22,10 +19,21 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${fontSans.variable} ${fontMono.variable} font-sans antialiased`}
+      className={`${fontSans.variable} font-sans antialiased`}
     >
-      <body>
-        <ThemeProvider>{children}</ThemeProvider>
+      <body className="min-h-svh bg-zinc-50 text-zinc-900">
+        <ThemeProvider>
+          {children}
+          <Toaster
+            theme="light"
+            position="top-center"
+            richColors
+            closeButton
+            toastOptions={{
+              className: "font-sans",
+            }}
+          />
+        </ThemeProvider>
       </body>
     </html>
   )

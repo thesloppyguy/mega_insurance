@@ -16,32 +16,76 @@ export type TokenResponse = {
   sessionId: string
 }
 
+export type EgressFile = {
+  role?: string
+  egress_id?: string | null
+  filepath?: string
+  status?: string
+  error?: string
+  detail?: string
+  playableUrl?: string | null
+  downloadUrl?: string | null
+  available?: boolean
+  sizeBytes?: number | null
+  contentType?: string | null
+}
+
 export type SessionReport = {
   session_id: string
   status?: string
+  participant_name?: string
+  end_reason?: string | null
+  created_at?: string
+  updated_at?: string
+  id_card_ocr?: {
+    idType?: string
+    extracted?: Record<string, string>
+    confidence?: number
+    summary?: string
+  } | null
   livekit_report?: Record<string, unknown> | null
   underwriting_report?: UnderwritingReport | null
   assets?: Array<Record<string, unknown>>
   events?: Array<Record<string, unknown>>
-  egress?: Array<Record<string, unknown>>
+  egress?: EgressFile[]
+}
+
+export type SamValidation = {
+  status?: string
+  person_coverage?: number
+  face_coverage?: number
+  id_card_frames?: number
+  multiple_persons?: boolean
+  flags?: string[]
+  presence_ok?: boolean
+  liveness_proxy_ok?: boolean
 }
 
 export type UnderwritingReport = {
   session_id: string
   disclosure?: string
-  identity_liveness?: Section
+  engine?: { wonder?: string; sam?: string; sam_source?: string }
+  identity_liveness?: Section & {
+    sam_person_coverage?: number
+    sam_face_coverage?: number
+  }
   face_matching?: Section & { match_score?: number | null; matched?: boolean | null }
   kyc?: Section & {
     document_type?: string | null
     extracted_fields?: Record<string, unknown>
     face_match_score?: number | null
+    sam_id_card_frames?: number
   }
   body_scan?: Section & {
     view?: string
     physical_conditions?: string[]
     estimates?: Record<string, unknown>
   }
-  proctoring?: Section & { summary?: string; timeline?: Array<Record<string, unknown>> }
+  proctoring?: Section & {
+    summary?: string
+    timeline?: Array<Record<string, unknown>>
+    sam_validation?: SamValidation | null
+  }
   audio?: Section & { transcript_excerpt?: string | null }
   underwriting_outcome?: {
     recommendation?: string
@@ -49,6 +93,19 @@ export type UnderwritingReport = {
     exception_flags?: string[]
     notes?: string
     disclosure?: string
+  }
+  sam_summary?: {
+    skipped?: boolean
+    reason?: string
+    source?: string
+    engine?: string
+    overlay_asset_id?: string
+    clip_asset_id?: string
+    overlay_video?: string
+    video?: string
+    validation?: SamValidation
+    concepts?: Array<Record<string, unknown>>
+    [key: string]: unknown
   }
 }
 
@@ -61,14 +118,14 @@ type Section = {
   evidence_asset_ids?: string[]
 }
 
-export async function createSession(participantName: string) {
+export async function createSession(callerName: string) {
   const res = await fetch(`${API_BASE}/sessions`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      participant_name: participantName,
-      // Gemini Live uses native audio; Anam avatar is opt-in later.
-      use_avatar: false,
+      caller_name: callerName,
+      participant_name: callerName,
+      use_avatar: true,
       recording_enabled: true,
       background_audio_enabled: false,
     }),
@@ -77,13 +134,14 @@ export async function createSession(participantName: string) {
   return (await res.json()) as CreateSessionResponse
 }
 
-export async function fetchToken(sessionId: string, participantName?: string) {
+export async function fetchToken(sessionId: string, callerName?: string) {
   const res = await fetch(`${API_BASE}/token`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       session_id: sessionId,
-      participant_name: participantName,
+      caller_name: callerName,
+      participant_name: callerName,
     }),
   })
   if (!res.ok) throw new Error(await res.text())
@@ -115,6 +173,77 @@ export async function uploadAsset(
   })
   if (!res.ok) throw new Error(await res.text())
   return res.json()
+}
+
+export type IdCardOcrResult = {
+  idType: string
+  extracted: Record<string, string>
+  confidence: number
+  summary: string
+  model: string
+}
+
+/** OCR the latest uploaded ID asset via Muse Spark. Returns null on soft failure. */
+export async function ocrIdCard(
+  sessionId: string
+): Promise<IdCardOcrResult | null> {
+  const res = await fetch(`${API_BASE}/sessions/${sessionId}/id-card-ocr`, {
+    method: "POST",
+  })
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "")
+    console.error("ID capture: OCR failed", res.status, detail)
+    return null
+  }
+  const body = (await res.json()) as { ocr?: IdCardOcrResult }
+  return body.ocr ?? null
+}
+
+async function readApiError(res: Response, fallback: string): Promise<string> {
+  const text = await res.text().catch(() => "")
+  if (!text.trim()) return fallback
+  try {
+    const data = JSON.parse(text) as { detail?: unknown }
+    if (typeof data.detail === "string" && data.detail.trim()) {
+      return data.detail.trim()
+    }
+  } catch {
+    /* plain text body */
+  }
+  return text.trim()
+}
+
+export async function requestAadhaarOtp(
+  sessionId: string,
+  aadhaarNumber: string
+) {
+  const res = await fetch(
+    `${API_BASE}/sessions/${sessionId}/aadhaar/okyc/otp`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ aadhaar_number: aadhaarNumber }),
+    }
+  )
+  if (!res.ok) {
+    throw new Error(await readApiError(res, "Could not request Aadhaar OTP"))
+  }
+  return (await res.json()) as { requested: true }
+}
+
+export async function verifyAadhaarOtp(sessionId: string, otp: string) {
+  const res = await fetch(
+    `${API_BASE}/sessions/${sessionId}/aadhaar/okyc/otp/verify`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ otp }),
+    }
+  )
+  if (!res.ok) {
+    throw new Error(await readApiError(res, "Could not verify Aadhaar OTP"))
+  }
+  return (await res.json()) as { verified: boolean; code?: number }
 }
 
 export { API_BASE }

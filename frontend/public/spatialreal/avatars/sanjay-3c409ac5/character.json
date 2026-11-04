@@ -1,0 +1,85 @@
+{
+	"animations": {
+		"audio_mono": {
+			"resource": {
+				"local": "mono.wav",
+				"remote": "/spatialreal/avatars/sanjay-3c409ac5/mono.wav",
+				"type": "wav"
+			}
+		},
+		"frame_idle": {
+			"resource": {
+				"local": "idle.pb",
+				"remote": "/spatialreal/avatars/sanjay-3c409ac5/idle.pb",
+				"type": "frame"
+			}
+		},
+		"frame_mono": {
+			"resource": {
+				"local": "mono.pb",
+				"remote": "/spatialreal/avatars/sanjay-3c409ac5/mono.pb",
+				"type": "frame"
+			}
+		}
+	},
+	"camera": {
+		"resource": {
+			"local": "model_info.json",
+			"remote": "/spatialreal/avatars/sanjay-3c409ac5/model_info.json",
+			"type": "camera"
+		}
+	},
+	"character_id": "3c409ac5-2637-4dd6-9c0c-c47c4b085966",
+	"character_settings": {
+		"camera": {
+			"fovXRadians": 0.514455,
+			"fovYRadians": 0.514455,
+			"rotation": "",
+			"translationX": 0.000553,
+			"translationY": -0.0572725,
+			"translationZ": 0.8519887
+		},
+		"eyefocus": {
+			"auto_eyelid_adjustment": true,
+			"enabled": false,
+			"eyelid_threshold": 0.2,
+			"targets": [0, 0, 1]
+		},
+		"eyelid": {
+			"auto_eyelid_adjustment": true,
+			"enabled": false,
+			"eyelid_threshold": 0.2,
+			"targets": [0, 0, 1]
+		},
+		"transform": {
+			"scale": 1,
+			"x": 0,
+			"y": 0
+		}
+	},
+	"created_at": "2026-09-28T23:49:04.935541Z",
+	"custom_animations": [],
+	"models": {
+		"gs_standard": {
+			"resource": {
+				"local": "point_cloud_low.ply",
+				"remote": "/spatialreal/avatars/sanjay-3c409ac5/point_cloud_low.ply",
+				"type": "ply"
+			},
+			"xr_resource": {
+				"local": "point_cloud_low.ply.gz",
+				"remote": "/spatialreal/avatars/sanjay-3c409ac5/point_cloud_low.ply.gz",
+				"type": "gz"
+			}
+		},
+		"shape": {
+			"resource": {
+				"local": "shape.pb",
+				"remote": "/spatialreal/avatars/sanjay-3c409ac5/shape.pb",
+				"type": "shape"
+			}
+		}
+	},
+	"updated_at": "2026-09-28T23:49:04.935541Z",
+	"version": "2.1.0"
+}

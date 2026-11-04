@@ -4,8 +4,12 @@
 **/.pytest_cache/
 data/
 *.pyc
+node_modules/
 frontend/node_modules/
 frontend/.next/
 worker/.venv/
 worker/.checkpoints/
 .uv/
+.pnpm-store/
+*.mp4
+.DS_Store

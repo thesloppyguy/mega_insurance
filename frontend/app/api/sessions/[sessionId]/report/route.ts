@@ -1,5 +1,6 @@
 import { requireWorker } from "@/lib/server/auth"
 import { API_PUBLIC_BASE_URL } from "@/lib/server/config"
+import { enrichEgressForReport } from "@/lib/server/egress-s3"
 import { getSession, updateSession } from "@/lib/server/store"
 
 type Params = { params: Promise<{ sessionId: string }> }
@@ -10,16 +11,22 @@ export async function GET(_req: Request, { params }: Params) {
   if (!session) {
     return Response.json({ detail: "session not found" }, { status: 404 })
   }
+  const egress = await enrichEgressForReport(session.egress)
   return Response.json({
     session_id: sessionId,
     status: session.status,
+    participant_name: session.participant_name,
+    end_reason: session.end_reason,
+    created_at: session.created_at,
+    updated_at: session.updated_at,
+    id_card_ocr: (session.config as Record<string, unknown> | null)?.idCardOcr ?? null,
     livekit_report: session.livekit_report,
     underwriting_report: session.underwriting_report,
     usage: session.usage,
     metrics: session.metrics,
     assets: session.assets,
     events: session.events,
-    egress: session.egress,
+    egress,
     api_base: API_PUBLIC_BASE_URL,
   })
 }

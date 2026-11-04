@@ -1,8 +1,13 @@
-from typing import Any
-from livekit.agents import JobContext
-from utils.backend_client import BackendClient
+from __future__ import annotations
+
 import logging
 import os
+from typing import Any
+
+from livekit.agents import JobContext
+
+from utils.backend_client import backend_from_env
+from utils.metadata import parse_job_metadata, resolve_session_id
 
 logger = logging.getLogger(__name__)
 
@@ -70,12 +75,14 @@ def normalize_usage_payload(usage: Any) -> dict[str, Any] | list[Any] | None:
 
 
 async def on_session_end(ctx: JobContext) -> None:
-    """Persist LiveKit session report + usage + full chat history to the backend."""
-    backend = BackendClient(
-        os.getenv("BACKEND_BASE_URL") or "",
-        os.getenv("BACKEND_API_KEY") or "",
-    )
+    """Persist LiveKit session report + Muse underwriting report to the backend."""
+    backend = backend_from_env()
     snapshot = SESSION_END_STATE.pop(ctx.job.id, {})
+    metadata = parse_job_metadata(ctx.job.metadata)
+    session_id = (
+        snapshot.get("session_id")
+        or resolve_session_id(metadata, fallback=ctx.room.name)
+    )
     report_payload: dict[str, Any] = {}
     usage_payload: dict[str, Any] | list[Any] | None = None
     metrics_payload: list[dict[str, Any]] = list(snapshot.get("metrics") or [])
@@ -86,6 +93,12 @@ async def on_session_end(ctx: JobContext) -> None:
     except Exception:
         logger.exception("make_session_report failed")
 
+    # Prefer chat history snapshot when LiveKit report omits it.
+    if isinstance(report_payload, dict) and snapshot.get("history"):
+        chat = report_payload.get("chat_history") or report_payload.get("history")
+        if not chat:
+            report_payload["chat_history"] = snapshot["history"]
+
     try:
         usage_payload = normalize_usage_payload(
             report_payload.get("usage") if isinstance(report_payload, dict) else None
@@ -95,10 +108,30 @@ async def on_session_end(ctx: JobContext) -> None:
     except Exception:
         usage_payload = normalize_usage_payload(snapshot.get("usage"))
 
-    await backend.post_session_report(
-        ctx.job.metadata.session_id,
-        report=report_payload,
-        usage=usage_payload,
-        metrics=metrics_payload,
-        is_final=True,
-    )
+    underwriting_report: dict[str, Any] | None = None
+    try:
+        from utils.muse_report import build_underwriting_report
+
+        session_data = await backend.get_session(session_id) if session_id else None
+        underwriting_report = await build_underwriting_report(
+            session_id=session_id,
+            session_data=session_data or {},
+            history=snapshot.get("history") or report_payload.get("chat_history"),
+        )
+    except Exception:
+        logger.exception("muse underwriting report failed")
+
+    if session_id:
+        await backend.post_session_report(
+            session_id,
+            report=report_payload,
+            usage=usage_payload,
+            metrics=metrics_payload,
+            is_final=True,
+            underwriting_report=underwriting_report,
+        )
+        await backend.patch_session_lifecycle(
+            session_id,
+            status="completed",
+            end_reason="completed",
+        )

@@ -7,6 +7,7 @@ export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as {
     session_id?: string
     participant_name?: string
+    caller_name?: string
   }
 
   if (!body.session_id) {
@@ -19,9 +20,19 @@ export async function POST(req: Request) {
   }
 
   const name =
-    body.participant_name || session.participant_name || "Candidate"
+    body.caller_name ||
+    body.participant_name ||
+    session.participant_name ||
+    "Candidate"
   const identity = `user_${session.session_id}`
-  const metadata = buildAgentDispatchMetadata(session)
+  const metadata = buildAgentDispatchMetadata({
+    ...session,
+    participant_name: name,
+    config: {
+      ...(session.config || {}),
+      caller_name: name,
+    },
+  })
 
   try {
     const token = await mintToken({

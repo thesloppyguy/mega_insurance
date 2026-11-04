@@ -3,11 +3,13 @@ name = "worker"
 version = "0.1.0"
 requires-python = ">=3.13"
 dependencies = [
+    "boto3>=1.43.123",
     "httpx>=0.28.1",
-    "livekit-agents[google,images,meta,silero]>=1.8.10",
+    "livekit-agents[google,images,meta,openai,silero]>=1.8.10",
     "livekit-plugins-anam>=1.8.10",
     "livekit-plugins-google>=1.8.10",
     "livekit-plugins-inworld>=1.8.10",
+    "livekit-plugins-openai>=1.8.10",
     "numpy>=2.5.4",
     "openai>=1.60.0",
     "pydantic>=2.14.2",

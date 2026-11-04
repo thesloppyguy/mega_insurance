@@ -1,1 +1,36 @@
 @import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-sans), "Baloo 2", ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  font-family: var(--font-sans), "Baloo 2", ui-sans-serif, system-ui, sans-serif;
+}
+
+/* OptiModel / gsplat avatar stage */
+.gsplat-viewport {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.gsplat-viewport-stage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.gsplat-viewport-stage canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  transform: translate(var(--gsplat-ox, 0%), var(--gsplat-oy, 0%))
+    scale(var(--gsplat-zoom, 1));
+  transform-origin: center center;
+  will-change: transform;
+}

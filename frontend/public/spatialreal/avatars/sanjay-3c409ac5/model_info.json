@@ -1,0 +1,14 @@
+{
+	"version": "2.1.0",
+	"workflownotebook_version": "5090-migration",
+	"camera": {
+		"fovXRadians": 0.469875,
+		"fovYRadians": 0.469875,
+		"rotation": 0,
+		"translationX": 0.000664,
+		"translationY": -0.074974,
+		"translationZ": 0.93639
+	},
+	"gaussianavatars_version": "1.0.0",
+	"vhap_version": "1.0.0"
+}

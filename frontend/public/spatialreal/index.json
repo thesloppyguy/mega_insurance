@@ -1,0 +1,12 @@
+{
+	"appId": "local-offline",
+	"avatars": [
+		{
+			"id": "3c409ac5-2637-4dd6-9c0c-c47c4b085966",
+			"name": "sanjay",
+			"role": "male",
+			"dir": "avatars/sanjay-3c409ac5",
+			"character": "/spatialreal/avatars/sanjay-3c409ac5/character.json"
+		}
+	]
+}

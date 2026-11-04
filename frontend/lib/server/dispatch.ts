@@ -1,86 +1,68 @@
 import {
-  ANAM_AVATAR_ID,
-  ANAM_AVATAR_NAME,
   API_PUBLIC_BASE_URL,
   WORKER_API_KEY,
 } from "./config"
 import type { SessionRecord } from "./store"
 
-const LIVE_INSTRUCTIONS =
-  "You are Mavrik, a professional underwriting interview guide with live camera vision. " +
-  "Guide the candidate through precheck, face, liveness, KYC ID, body front, and body back. " +
-  "Use set_stage when changing stages. MediaPipe pose updates are context only — they never capture. " +
-  "When framing looks good, tell the candidate you are capturing, then call request_capture. " +
-  "Speak clearly. Do not invent medical diagnoses."
+const CASCADE_INSTRUCTIONS =
+  "You are Sanjay, a professional underwriting interview guide. " +
+  "Guide the candidate through face capture, body scan, Aadhaar verification, and QnA. " +
+  "Use the available tools for captures and OTP. Speak clearly. Do not invent medical diagnoses."
 
-const LIVE_GREETING =
-  "Hello, and welcome. I am Mavrik, your interview guide. " +
-  "I can see your camera and will walk you through identity and body captures. Are you ready?"
+const CASCADE_GREETING =
+  "Hello, and welcome. I am Sanjay from Mavrik, your interview guide. " +
+  "I will walk you through identity and body captures. Are you ready?"
 
 export function buildAgentDispatchMetadata(session: SessionRecord) {
   const cfg = (session.config || {}) as Record<string, unknown>
-  const avatarId = (cfg.anam_avatar_id as string | undefined) || ANAM_AVATAR_ID
-  const avatarName =
-    (cfg.anam_avatar_name as string | undefined) || ANAM_AVATAR_NAME
-  // Gemini Live speaks natively — keep avatar off unless explicitly requested.
-  const useAvatar = Boolean(avatarId) && cfg.use_avatar === true
-  const liveModel =
-    (cfg.realtime_model as string | undefined) ||
-    process.env.GEMINI_LIVE_MODEL ||
-    "gemini-3.8-live"
-  const liveVoice =
-    (cfg.realtime_voice as string | undefined) ||
-    process.env.GEMINI_LIVE_VOICE ||
-    "Puck"
+  const callerName =
+    (cfg.caller_name as string | undefined) ||
+    session.participant_name ||
+    "Candidate"
 
   return {
     session_id: session.session_id,
     organization_id: session.organization_id,
     campaign_id: session.campaign_id,
     recording_enabled: cfg.recording_enabled !== false,
-    use_avatar: useAvatar,
+    caller_name: callerName,
+    contact_metadata: {
+      caller_name: callerName,
+    },
     max_duration_seconds: (cfg.max_duration_seconds as number) ?? 1800,
     inactivity_warning_seconds: (cfg.inactivity_warning_seconds as number) ?? 45,
     inactivity_end_seconds: (cfg.inactivity_end_seconds as number) ?? 120,
-    dial_phone_number: null,
     tools_context: {
       backend_base_url: API_PUBLIC_BASE_URL,
       worker_api_key: WORKER_API_KEY,
       session_id: session.session_id,
     },
     avatar: {
-      provider_id: useAvatar ? "anam" : null,
-      external_avatar_id: useAvatar ? avatarId || null : null,
-      name: avatarName,
+      provider_id: "arkit",
+      external_avatar_id: "sanjay",
+      name: "Sanjay",
     },
     config: {
-      stt: null,
-      llm: null,
-      tts: null,
-      realtime: {
-        provider: "google",
-        model: liveModel,
-        voice: liveVoice,
+      pipeline_mode: "cascaded",
+      stt: { provider: "meta", model: "muse-voice-transcribe-1.0" },
+      llm: {
+        provider: "inworld",
+        model: "gemma-4-26b-a4b-it",
       },
+      tts: {
+        provider: "inworld",
+        model: "inworld-tts-2-flash",
+        voice: "Aarav",
+      },
+      realtime: null,
       avatar: {
-        provider_id: useAvatar ? "anam" : null,
-        external_avatar_id: useAvatar ? avatarId || null : null,
-        name: avatarName,
+        provider_id: "arkit",
+        external_avatar_id: "sanjay",
+        name: "Sanjay",
+        enabled: true,
       },
-      noise_filtering: {
-        enabled: false,
-        suppression_level: 50,
-      },
-      background_audio: {
-        enabled: false,
-        ambient_volume: Number(cfg.ambient_volume ?? 0.35),
-        thinking_volume: Number(cfg.thinking_volume ?? 0.45),
-      },
-      tool_call_audio: {
-        enabled: false,
-      },
-      instructions: (cfg.instructions as string | undefined) || LIVE_INSTRUCTIONS,
-      greeting: (cfg.greeting as string | undefined) || LIVE_GREETING,
+      instructions: (cfg.instructions as string | undefined) || CASCADE_INSTRUCTIONS,
+      greeting: (cfg.greeting as string | undefined) || CASCADE_GREETING,
     },
   }
 }

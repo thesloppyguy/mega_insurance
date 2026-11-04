@@ -4,6 +4,19 @@ import path from "path"
 
 import { ASSETS_DIR, SESSIONS_DIR, ensureDirs } from "./config"
 
+export type AadhaarOkycState = {
+  referenceId: string
+  aadhaarLast4: string
+  requestedAt: number
+  verifiedAt?: number
+  ekyc?: {
+    name?: string
+    dateOfBirth?: string
+    gender?: string
+    maskedNumber?: string
+  }
+}
+
 export type SessionRecord = {
   session_id: string
   organization_id: string
@@ -14,6 +27,8 @@ export type SessionRecord = {
   livekit_job_id: string | null
   end_reason: string | null
   config: Record<string, unknown>
+  /** Deepvue Aadhaar OKYC state (reference_id for OTP verify). */
+  aadhaar_okyc?: AadhaarOkycState | null
   assets: Array<Record<string, unknown>>
   events: Array<Record<string, unknown>>
   egress: Array<Record<string, unknown>>
