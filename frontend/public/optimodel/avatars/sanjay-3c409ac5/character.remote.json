@@ -3,21 +3,21 @@
 		"audio_mono": {
 			"resource": {
 				"local": "mono.wav",
-				"remote": "https://cdn.spatialreal.cloud/character-resource-bj/assets/2026-09-28/51c0619a-0306-477a-89d3-8ce1894a3ec0.wav",
+				"remote": "/optimodel/avatars/sanjay-3c409ac5/mono.wav",
 				"type": "wav"
 			}
 		},
 		"frame_idle": {
 			"resource": {
 				"local": "idle.pb",
-				"remote": "https://cdn.spatialreal.cloud/character-resource-bj/assets/2026-09-28/ab4d3a1d-d8d8-4c9b-a79e-aebdb0eb1494.pb",
+				"remote": "/optimodel/avatars/sanjay-3c409ac5/idle.pb",
 				"type": "frame"
 			}
 		},
 		"frame_mono": {
 			"resource": {
 				"local": "mono.pb",
-				"remote": "https://cdn.spatialreal.cloud/character-resource-bj/assets/2026-09-28/9ac16207-4e0d-4679-8c03-b6211156043d.pb",
+				"remote": "/optimodel/avatars/sanjay-3c409ac5/mono.pb",
 				"type": "frame"
 			}
 		}
@@ -25,7 +25,7 @@
 	"camera": {
 		"resource": {
 			"local": "model_info.json",
-			"remote": "https://cdn.spatialreal.cloud/character-resource-bj/assets/2026-09-28/df8be1ac-0c9c-41ad-a7fa-af38bf0d6f42.json",
+			"remote": "/optimodel/avatars/sanjay-3c409ac5/model_info.json",
 			"type": "camera"
 		}
 	},
@@ -43,13 +43,21 @@
 			"auto_eyelid_adjustment": true,
 			"enabled": false,
 			"eyelid_threshold": 0.2,
-			"targets": [0, 0, 1]
+			"targets": [
+				0,
+				0,
+				1
+			]
 		},
 		"eyelid": {
 			"auto_eyelid_adjustment": true,
 			"enabled": false,
 			"eyelid_threshold": 0.2,
-			"targets": [0, 0, 1]
+			"targets": [
+				0,
+				0,
+				1
+			]
 		},
 		"transform": {
 			"scale": 1,
@@ -63,19 +71,19 @@
 		"gs_standard": {
 			"resource": {
 				"local": "point_cloud_low.ply",
-				"remote": "https://cdn.spatialreal.cloud/character-resource-bj/assets/2026-09-28/9796d08b-c074-494d-aeea-b80fcba00d63.ply",
+				"remote": "/optimodel/avatars/sanjay-3c409ac5/point_cloud_low.ply",
 				"type": "ply"
 			},
 			"xr_resource": {
 				"local": "point_cloud_low.ply.gz",
-				"remote": "https://cdn.spatialreal.cloud/character-resource-bj/assets/2026-09-28/ca63283c-21fa-444c-a122-1d999a89bd80.gz",
+				"remote": "/optimodel/avatars/sanjay-3c409ac5/point_cloud_low.ply.gz",
 				"type": "gz"
 			}
 		},
 		"shape": {
 			"resource": {
 				"local": "shape.pb",
-				"remote": "https://cdn.spatialreal.cloud/character-resource-bj/assets/2026-09-28/8527d4a4-8f04-4ddc-acbd-adb2705ef693.pb",
+				"remote": "/optimodel/avatars/sanjay-3c409ac5/shape.pb",
 				"type": "shape"
 			}
 		}

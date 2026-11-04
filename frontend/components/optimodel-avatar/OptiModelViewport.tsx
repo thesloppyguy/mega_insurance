@@ -61,8 +61,7 @@ type Props = {
 };
 
 /**
- * OptiModel stage: SpatialReal Gaussian avatar (local Spatius host mode)
- * driven by worker-generated FLAME frames → speech overlay.
+ * OptiModel stage: Gaussian avatar driven by worker FLAME frames → speech overlay.
  */
 export function OptiModelViewport({
 	flameFeed,
@@ -188,7 +187,7 @@ export function OptiModelViewport({
 					).getAvatarCore?.() ?? null;
 
 				if (cancelled) return;
-				onStatusRef.current?.("attaching SpatialReal model…");
+				onStatusRef.current?.("attaching OptiModel avatar…");
 
 				const avatar = await AvatarManager.shared.load(
 					characterId,
@@ -220,7 +219,7 @@ export function OptiModelViewport({
 				let baseline: FlameKeyframe = zeroKeyframe();
 				try {
 					const frameRes = await fetch(
-						`/spatialreal/${asset.dir}/idle.frame0.json`,
+						`/optimodel/${asset.dir}/idle.frame0.json`,
 					);
 					if (frameRes.ok) {
 						baseline = normalizeKeyframe(
@@ -296,7 +295,7 @@ export function OptiModelViewport({
 					);
 				}
 				const idleRes = await fetch(
-					`/spatialreal/${asset.dir}/idle.pb`,
+					`/optimodel/${asset.dir}/idle.pb`,
 				);
 				if (!idleRes.ok) {
 					throw new Error(

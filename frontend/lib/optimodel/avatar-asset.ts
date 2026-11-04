@@ -85,7 +85,7 @@ export function toAvatarAsset(
 }
 
 /**
- * Force remotes to path-absolute `/spatialreal/...` so the browser always
+ * Force remotes to path-absolute `/optimodel/...` so the browser always
  * resolves against the page origin (never Docker/`NEXT_PUBLIC_SITE_URL`
  * localhost, which becomes ERR_CONNECTION_REFUSED in production).
  */
@@ -108,7 +108,7 @@ function toPathAbsoluteRemote(remote: string): string {
 	try {
 		const parsed = new URL(remote);
 		if (
-			parsed.pathname.startsWith("/spatialreal/") ||
+			parsed.pathname.startsWith("/optimodel/") ||
 			parsed.pathname.startsWith("/avatar-api/")
 		) {
 			return `${parsed.pathname}${parsed.search}`;

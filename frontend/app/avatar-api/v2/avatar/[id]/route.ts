@@ -12,7 +12,7 @@ type IndexJson = {
 
 async function loadIndex(): Promise<IndexJson> {
 	const raw = await readFile(
-		join(process.cwd(), "public/spatialreal/index.json"),
+		join(process.cwd(), "public/optimodel/index.json"),
 		"utf8",
 	);
 	return JSON.parse(raw) as IndexJson;
@@ -46,7 +46,7 @@ export async function GET(
 
 		const metaPath = join(
 			process.cwd(),
-			"public/spatialreal",
+			"public/optimodel",
 			entry.dir,
 			"character.json",
 		);
@@ -54,7 +54,7 @@ export async function GET(
 			string,
 			unknown
 		>;
-		// Always path-absolute (`/spatialreal/...`). Never emit
+		// Always path-absolute (`/optimodel/...`). Never emit
 		// https://localhost:3000/... — Docker/SITE_URL absolutizing breaks prod.
 		const payload = relativizeRemotes(toAvatarAsset(meta, entry.dir));
 

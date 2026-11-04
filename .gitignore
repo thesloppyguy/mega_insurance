@@ -11,5 +11,8 @@ worker/.venv/
 worker/.checkpoints/
 .uv/
 .pnpm-store/
+.turbo/
+*.cookie
 *.mp4
 .DS_Store
+*.tsbuildinfo

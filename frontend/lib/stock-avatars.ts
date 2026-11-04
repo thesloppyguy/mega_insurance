@@ -1,11 +1,11 @@
 /**
  * OptiModel catalog ids → SpatialReal character packs under
- * `public/spatialreal/avatars/`.
+ * `public/optimodel/avatars/`.
  */
 export type OptiModelAsset = {
 	/** Spatius / SpatialReal character UUID (AvatarManager.load id). */
 	characterId: string;
-	/** Path under `/spatialreal/` (no leading slash on dir). */
+	/** Path under `/optimodel/` (no leading slash on dir). */
 	dir: string;
 	preview: string;
 	/**
@@ -52,7 +52,7 @@ export function getGsplatAvatarZipUrl(
 	externalAvatarId: string | null | undefined,
 ): string {
 	const asset = getOptiModelAsset(externalAvatarId);
-	return `/spatialreal/${asset.dir}/character.json`;
+	return `/optimodel/${asset.dir}/character.json`;
 }
 
 export function getAvatarPreviewUrl(

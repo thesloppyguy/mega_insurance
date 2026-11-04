@@ -65,7 +65,7 @@ const nextConfig = {
       { source: "/_next/static/:path*", headers: corp },
       { source: "/_avatarkit/:path*", headers: corp },
       { source: "/assets/:path*", headers: corp },
-      { source: "/spatialreal/:path*", headers: corp },
+      { source: "/optimodel/:path*", headers: corp },
       { source: "/avatar-api/:path*", headers: corp },
     ]
   },

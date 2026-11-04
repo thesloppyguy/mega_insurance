@@ -5,7 +5,7 @@ import {
 	type WasmFrameParams,
 } from "@/lib/arkit-flame";
 
-/** SpatialReal idle clips are authored at 25 fps. */
+/** OptiModel idle clips are authored at 25 fps. */
 export const IDLE_FPS = 25;
 export const IDLE_SPEED_DEFAULT = 0.5;
 export const IDLE_SPEED_MIN = 0.1;

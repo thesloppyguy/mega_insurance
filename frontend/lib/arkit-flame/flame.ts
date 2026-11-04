@@ -1,4 +1,4 @@
-/** FLAME keyframe shape (SpatialReal / Spatius KeyframeData). */
+/** FLAME keyframe shape (OptiModel KeyframeData). */
 export type FlameKeyframe = {
 	translation: number[];
 	rotation: number[];

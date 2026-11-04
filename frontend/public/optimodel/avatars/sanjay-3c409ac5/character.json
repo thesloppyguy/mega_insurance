@@ -3,21 +3,21 @@
 		"audio_mono": {
 			"resource": {
 				"local": "mono.wav",
-				"remote": "/spatialreal/avatars/sanjay-3c409ac5/mono.wav",
+				"remote": "/optimodel/avatars/sanjay-3c409ac5/mono.wav",
 				"type": "wav"
 			}
 		},
 		"frame_idle": {
 			"resource": {
 				"local": "idle.pb",
-				"remote": "/spatialreal/avatars/sanjay-3c409ac5/idle.pb",
+				"remote": "/optimodel/avatars/sanjay-3c409ac5/idle.pb",
 				"type": "frame"
 			}
 		},
 		"frame_mono": {
 			"resource": {
 				"local": "mono.pb",
-				"remote": "/spatialreal/avatars/sanjay-3c409ac5/mono.pb",
+				"remote": "/optimodel/avatars/sanjay-3c409ac5/mono.pb",
 				"type": "frame"
 			}
 		}
@@ -25,7 +25,7 @@
 	"camera": {
 		"resource": {
 			"local": "model_info.json",
-			"remote": "/spatialreal/avatars/sanjay-3c409ac5/model_info.json",
+			"remote": "/optimodel/avatars/sanjay-3c409ac5/model_info.json",
 			"type": "camera"
 		}
 	},
@@ -63,19 +63,19 @@
 		"gs_standard": {
 			"resource": {
 				"local": "point_cloud_low.ply",
-				"remote": "/spatialreal/avatars/sanjay-3c409ac5/point_cloud_low.ply",
+				"remote": "/optimodel/avatars/sanjay-3c409ac5/point_cloud_low.ply",
 				"type": "ply"
 			},
 			"xr_resource": {
 				"local": "point_cloud_low.ply.gz",
-				"remote": "/spatialreal/avatars/sanjay-3c409ac5/point_cloud_low.ply.gz",
+				"remote": "/optimodel/avatars/sanjay-3c409ac5/point_cloud_low.ply.gz",
 				"type": "gz"
 			}
 		},
 		"shape": {
 			"resource": {
 				"local": "shape.pb",
-				"remote": "/spatialreal/avatars/sanjay-3c409ac5/shape.pb",
+				"remote": "/optimodel/avatars/sanjay-3c409ac5/shape.pb",
 				"type": "shape"
 			}
 		}

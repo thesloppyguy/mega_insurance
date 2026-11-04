@@ -3,7 +3,7 @@
  *
  * OptiModel must not depend on SPATIALREAL_* / SPATIUS_* env vars or
  * SpatialWalk / Spatius cloud (CDN, bootstrap, telemetry). Everything is
- * served from `/spatialreal/*` + `/avatar-api/*`.
+ * served from `/optimodel/*` + `/avatar-api/*`.
  *
  * Lobby flow:
  * 1. Patch fetch: local packs + rewrite/stub SpatialWalk cloud calls
@@ -18,7 +18,7 @@
 import { getOptiModelAsset } from "@/lib/stock-avatars";
 
 /** Bump when cached API JSON may still embed unreachable localhost remotes. */
-const OPTIMODEL_CACHE_NAME = "optimind-optimodel-assets-v2";
+const OPTIMODEL_CACHE_NAME = "mavrik-optimodel-assets-v3";
 const LOCAL_API = "/avatar-api";
 const LOCAL_TOKEN = "local-offline";
 const LOCAL_APP_ID = "local-offline";
@@ -35,7 +35,7 @@ const SPATIALWALK_CDN_HOSTS = new Set([
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0", "[::1]"]);
 
 /** Same-origin stand-in for SpatialWalk CDN `/public/...` assets. */
-const LOCAL_FLAME_SDK_BASE = "/spatialreal/sdk";
+const LOCAL_FLAME_SDK_BASE = "/optimodel/sdk";
 const UNIFIED_MODEL_PATH = "unified_model_body.pb.gz";
 
 /** Pack files shared by every OptiModel avatar (compressed GS is per-avatar). */
@@ -81,14 +81,14 @@ function pathnameOf(url: string): string {
 function isOptiModelAssetUrl(url: string): boolean {
 	const path = pathnameOf(url);
 	return (
-		path.startsWith("/spatialreal/") || path.startsWith("/avatar-api/")
+		path.startsWith("/optimodel/") || path.startsWith("/avatar-api/")
 	);
 }
 
 /**
  * Normalize OptiModel asset URLs onto the page origin:
- * - Spatius flame CDN → `/spatialreal/sdk/*` (COEP require-corp)
- * - `https://localhost:3000/spatialreal/...` from stale API/cache → same-origin
+ * - Spatius flame CDN → `/optimodel/sdk/*` (COEP require-corp)
+ * - `https://localhost:3000/optimodel/...` from stale API/cache → same-origin
  *
  * Absolute localhost remotes must be rewritten: `new URL(absolute)` ignores
  * the page origin, so fetch would hit the user's machine (ERR_CONNECTION_REFUSED).
@@ -106,7 +106,7 @@ function rewriteOptiModelUrl(url: string): string {
 		const path = parsed.pathname;
 		if (
 			LOOPBACK_HOSTS.has(parsed.hostname) &&
-			(path.startsWith("/spatialreal/") ||
+			(path.startsWith("/optimodel/") ||
 				path.startsWith("/avatar-api/"))
 		) {
 			return `${window.location.origin}${path}${parsed.search}`;
@@ -267,8 +267,8 @@ async function loadOptiModelBytes(
 
 /**
  * Patch window.fetch for OptiModel offline mode:
- * - `/spatialreal/*` + `/avatar-api/*` → memory + Cache API
- * - SpatialWalk flame CDN → `/spatialreal/sdk/*`
+ * - `/optimodel/*` + `/avatar-api/*` → memory + Cache API
+ * - SpatialWalk flame CDN → `/optimodel/sdk/*`
  * - SpatialWalk bootstrap / telemetry → local stubs (no cloud, COEP-safe)
  */
 export function installOptiModelAssetCache(): void {
@@ -345,7 +345,7 @@ export function ensureOptiModelSdkInitialized(): Promise<SpatiusAvatarKit> {
 
 function assetUrlsFor(avatarId: string | null | undefined): string[] {
 	const asset = getOptiModelAsset(avatarId);
-	const base = `/spatialreal/${asset.dir}`;
+	const base = `/optimodel/${asset.dir}`;
 	const urls = PREFETCH_FILES.map((file) => `${base}/${file}`);
 	// Only the format that exists for this pack (samira: csplat.gz, sanjay: ply.gz).
 	urls.push(`${base}/${asset.compressedGs}`);
